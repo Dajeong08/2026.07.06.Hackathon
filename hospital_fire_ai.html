@@ -1,232 +1,320 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <title>요양병원 방별 화재 관제 시스템</title>
-    <style>
-        /* 최소한의 레이아웃 구분을 위한 단일 태그 스타일 */
-        body { font-family: sans-serif; margin: 20px; }
-        .flex-container { display: flex; gap: 30px; }
-        .control-box { border: 2px solid #ccc; padding: 15px; width: 350px; }
-        .room-grid { display: grid; grid-template-columns: repeat(3, 100px); gap: 10px; margin-top: 15px; }
-        .room-btn { width: 100px; height: 60px; cursor: pointer; text-align: center; }
-        .result-card { border-left: 4px solid red; background: #f9f9f9; padding: 10px; margin-bottom: 10px; }
-    </style>
+<meta charset="UTF-8">
+<title>요양병원 방별 화재 관제 시스템 (GA 버전)</title>
+<style>
+body { font-family: sans-serif; margin: 20px; }
+.flex-container { display: flex; gap: 30px; }
+.control-box { border: 2px solid #ccc; padding: 15px; width: 350px; }
+.room-grid { display: grid; grid-template-columns: repeat(3, 100px); gap: 10px; margin-top: 15px; }
+.room-btn { width: 100px; height: 60px; cursor: pointer; text-align: center; }
+.result-card { border-left: 4px solid red; background: #f9f9f9; padding: 10px; margin-bottom: 10px; }
+.weight-box { background: #eef; padding: 10px; margin-top: 15px; font-size: 13px; border-radius: 6px; }
+</style>
 </head>
 <body>
-    
 
-    <h2>🚨 요양병원 방별 화재 대피 관제 시스템 (기능 집중형)</h2>
-    <hr>
+<!-- ================= UI 영역 시작 ================= -->
 
-    <div class="flex-container">
-        <div>
-            <h3>🏢 건물 관리 컨트롤러</h3>
-            <div>
-                <label>🔥 화재 발생 층: </label>
-                <select id="fireFloor">
-                    <option value="1">1층</option>
-                    <option value="2" selected>2층</option>
-                    <option value="3">3층</option>
-                    <option value="4">4층</option>
-                </select>
-                <button onclick="addFloor()">➕ 층 추가</button>
-            </div>
+<h2>🚨 요양병원 방별 화재 대피 관제 시스템 (GA 버전)</h2>
+<hr>
 
-            <h4 style="margin-bottom: 5px;">📍 현재 볼 층 선택</h4>
-            <div id="floorSelector">
-                </div>
+<div class="flex-container">
 
-            <h4 style="margin-bottom: 5px;"><span id="currentViewFloorLabel">2</span>층 내부 방 배치도 (방을 클릭하세요)</h4>
-            <div id="roomContainer" class="room-grid">
-                </div>
-            <br>
-            <button onclick="runEvacuationAI()" style="width:320px; height:40px; font-weight:bold;">🧬 AI 최우선 대피 순위 분석 가동</button>
-        </div>
-
-        <div class="control-box">
-            <h3>📝 <span id="selectedRoomLabel">선택 없음</span> 환자 편집</h3>
-            <div id="editorInputs">
-                <p>방을 선택하면 입력창이 활성화됩니다.</p>
-            </div>
-            <br>
-            <button id="saveBtn" onclick="saveRoomData()" disabled style="width:100%;">💾 현재 방 데이터 저장</button>
-        </div>
-
-        <div style="flex: 1;">
-            <h3>⚡ 최우선 대피 지시서 (TOP 3 위험 방)</h3>
-            <div id="resultList">
-                <p style="color:#666;">분석 버튼을 누르면 가장 위험한 방 3곳이 정렬됩니다.</p>
-            </div>
-        </div>
+  <div>
+    <h3>🏢 건물 관리 컨트롤러</h3>
+    <div>
+      <label>🔥 화재 발생 층: </label>
+      <select id="fireFloor">
+        <option value="1">1층</option>
+        <option value="2" selected>2층</option>
+        <option value="3">3층</option>
+        <option value="4">4층</option>
+      </select>
+      <button onclick="addFloor()">➕ 층 추가</button>
+      <button onclick="randomizePatients()">🎲 환자 랜덤 배치</button>
     </div>
 
-    <script>
-        // 전역 상태 데이터 구조 (층 수 관리 및 각 방의 데이터 독립 저장)
-        let maxFloor = 4; 
-        let currentViewFloor = 2; 
-        let currentSelectedRoom = null; 
+    <h4>📍 현재 볼 층 선택</h4>
+    <div id="floorSelector"></div>
 
-        // 데이터 백엔드 역할 (모든 방의 와상(A), 휠체어(B), 자립(C), 치매(D) 인원 저장)
-        let hospitalData = {};
+    <h4><span id="currentViewFloorLabel">2</span>층 내부 방 배치도 (방을 클릭하세요)</h4>
+    <div id="roomContainer" class="room-grid"></div>
 
-        // 시스템 초기화 함수
-        window.onload = function() {
-            initData();
-            renderFloorButtons();
-            renderRooms();
-        }
+    <br>
+    <button onclick="runEvacuationAI()" style="width:320px; height:40px; font-weight:bold;">🧬 AI 최우선 대피 순위 분석 가동</button>
+  </div>
 
-        // 초기 4개 층, 층당 6개 방의 데이터 구조 미리 확보
-        function initData() {
-            for (let f = 1; f <= 4; f++) {
-                createFloorData(f);
-            }
-        }
+  <div class="control-box">
+    <h3>📝 <span id="selectedRoomLabel">선택 없음</span> 환자 편집</h3>
+    <div id="editorInputs"><p>방을 선택하면 입력창이 활성화됩니다.</p></div>
+    <br>
+    <button id="saveBtn" onclick="saveRoomData()" disabled style="width:100%;">💾 현재 방 데이터 저장</button>
+  </div>
 
-        function createFloorData(f) {
-            for (let r = 1; r <= 6; r++) {
-                let roomKey = `${f}층-${r}호`;
-                if (!hospitalData[roomKey]) {
-                    // 초기 샘플 데이터 일부 주입, 나머지는 0명
-                    hospitalData[roomKey] = {
-                        A: (f===2 && r===1) ? 3 : (f===3 && r===2) ? 4 : 0,
-                        B: (f===2 && r===3) ? 2 : 0,
-                        C: 0, D: 0
-                    };
-                }
-            }
-        }
+  <div style="flex: 1;">
+    <h3>⚡ 최우선 대피 지시서 (TOP 3 위험 방)</h3>
+    <div id="resultList"><p style="color:#666;">분석 버튼을 누르면 가장 위험한 방 3곳이 정렬됩니다.</p></div>
+  </div>
 
-        // [기능] 사용자가 원할 때 층을 무한으로 늘리는 함수
-        function addFloor() {
-            maxFloor++;
-            createFloorData(maxFloor);
-            renderFloorButtons();
-            alert(`${maxFloor}층이 새롭게 빌딩 구조에 추가되었습니다.`);
-        }
+</div>
 
-        // 층 변경 버튼 렌더링
-        function renderFloorButtons() {
-            const container = document.getElementById('floorSelector');
-            container.innerHTML = "";
-            for (let f = 1; f <= maxFloor; f++) {
-                container.innerHTML += `<button onclick="changeViewFloor(${f})" style="margin-right:5px; font-weight:${f===currentViewFloor?'bold':'normal'}">${f}층</button>`;
-            }
-        }
+<!-- ================= UI 영역 끝 ================= -->
 
-        function changeViewFloor(f) {
-            currentViewFloor = f;
-            document.getElementById('currentViewFloorLabel').innerText = f;
-            renderFloorButtons();
-            renderRooms();
-        }
+<script>
+// ================= 데이터 상태 & UI 로직 시작 =================
+// 전역 변수 설정
+let maxFloor = 4; // 지금 건물에 층이 몇층이 있는지(초기 : 4)
+let currentViewFloor = 2; // 현재 볼 층 선택(초기 : 2)
+let currentSelectedRoom = null; // 현재 선택된 방(초기 : 없음)
+let hospitalData = {}; // 병원 각 방의 데이터를 담는 딕셔너리
 
-        // [기능] 방 선택 UI 출력 및 재실 현황 간단 요약 표시
-        function renderRooms() {
-            const container = document.getElementById('roomContainer');
-            container.innerHTML = "";
-            for (let r = 1; r <= 6; r++) {
-                let roomKey = `${currentViewFloor}층-${r}호`;
-                let data = hospitalData[roomKey];
-                let totalPatients = data.A + data.B + data.C + data.D;
+window.onload = function () { // 페이지가 새로 로딩될 때 실행 
+  for (let f = 1; f <= maxFloor; f++) createFloorData(f); // createFloorData(1~4)까지 반복 
+  renderFloorButtons(); // renderFloorButtons 호출 
+  renderRooms(); // renderRooms 호출 
+};
 
-                container.innerHTML += `
-                    <button class="room-btn" onclick="selectRoom('${roomKey}')">
-                        <b>${r}호</b><br>
-                        (총 ${totalPatients}명)
-                    </button>
-                `;
-            }
-        }
+function createFloorData(f) { // onload에서 f를 1~4만큼 반복 
+  for (let r = 1; r <= 6; r++) { // r을 1~6
+    let key = `${f}층-${r}호`;
+    if (!hospitalData[key]) hospitalData[key] = { A: 0, B: 0, C: 0, D: 0 };
+  }
+}
 
-        // [기능] 특정 방 클릭 시 오른쪽 편집창에 현재 저장 상태 불러오기
-        function selectRoom(roomKey) {
-            currentSelectedRoom = roomKey;
-            document.getElementById('selectedRoomLabel').innerText = roomKey;
-            
-            const data = hospitalData[roomKey];
-            const inputArea = document.getElementById('editorInputs');
-            
-            inputArea.innerHTML = `
-                <p>와상(A): <input type="number" id="edit_A" value="${data.A}" min="0" style="width:60px;"> 명</p>
-                <p>휠체어(B): <input type="number" id="edit_B" value="${data.B}" min="0" style="width:60px;"> 명</p>
-                <p>자립(C): <input type="number" id="edit_C" value="${data.C}" min="0" style="width:60px;"> 명</p>
-                <p>치매(D): <input type="number" id="edit_D" value="${data.D}" min="0" style="width:60px;"> 명</p>
-            `;
-            document.getElementById('saveBtn').disabled = false;
-        }
+function addFloor() {
+  maxFloor++;
+  createFloorData(maxFloor);
+  renderFloorButtons();
+}
 
-        // [기능] 입력한 환자 수를 해당 방 키(Key)값에 임시 데이터베이스로 저장
-        function saveRoomData() {
-            if (!currentSelectedRoom) return;
-            
-            hospitalData[currentSelectedRoom] = {
-                A: parseInt(document.getElementById('edit_A').value) || 0,
-                B: parseInt(document.getElementById('edit_B').value) || 0,
-                C: parseInt(document.getElementById('edit_C').value) || 0,
-                D: parseInt(document.getElementById('edit_D').value) || 0
-            };
-            
-            renderRooms(); // 맵 요약 갱신
-            alert(`${currentSelectedRoom}의 환자 재실 정보가 성공적으로 기록되었습니다.`);
-        }
+function renderFloorButtons() {
+  const el = document.getElementById('floorSelector');
+  el.innerHTML = "";
+  for (let f = 1; f <= maxFloor; f++) {
+    el.innerHTML += `<button onclick="changeViewFloor(${f})" style="margin-right:5px; font-weight:${f === currentViewFloor ? 'bold' : 'normal'}">${f}층</button>`;
+  }
+}
 
-        // 3. AI 연산 파트 (각 방 단위로 루프 정렬 연산 처리)
-        function runEvacuationAI() {
-            const fireFloor = parseInt(document.getElementById('fireFloor').value);
-            let evaluationResults = [];
+function changeViewFloor(f) {
+  currentViewFloor = f;
+  document.getElementById('currentViewFloorLabel').innerText = f;
+  renderFloorButtons();
+  renderRooms();
+}
 
-            // 등록된 전체 데이터베이스 순회 루프
-            for (let roomKey in hospitalData) {
-                let data = hospitalData[roomKey];
-                let total = data.A + data.B + data.C + data.D;
+function renderRooms() {
+  const el = document.getElementById('roomContainer');
+  el.innerHTML = "";
+  for (let r = 1; r <= 6; r++) {
+    let key = `${currentViewFloor}층-${r}호`;
+    let d = hospitalData[key];
+    let total = d.A + d.B + d.C + d.D;
+    el.innerHTML += `<button class="room-btn" onclick="selectRoom('${key}')"><b>${r}호</b><br>(총 ${total}명)</button>`;
+  }
+}
 
-                if (total > 0) {
-                    let floor = parseInt(roomKey.split('층')[0]);
-                    let baseRiskScore = 0;
+function selectRoom(key) {
+  currentSelectedRoom = key;
+  document.getElementById('selectedRoomLabel').innerText = key;
+  const d = hospitalData[key];
+  document.getElementById('editorInputs').innerHTML = `
+    <p>와상(A): <input type="number" id="edit_A" value="${d.A}" min="0" style="width:60px;"> 명</p>
+    <p>휠체어(B): <input type="number" id="edit_B" value="${d.B}" min="0" style="width:60px;"> 명</p>
+    <p>자립(C): <input type="number" id="edit_C" value="${d.C}" min="0" style="width:60px;"> 명</p>
+    <p>치매(D): <input type="number" id="edit_D" value="${d.D}" min="0" style="width:60px;"> 명</p>`;
+  document.getElementById('saveBtn').disabled = false;
+}
 
-                    // 수직 위치 위험도 가중치 
-                    if (floor === fireFloor) baseRiskScore += 100;
-                    else if (floor === fireFloor + 1) baseRiskScore += 90;
-                    else if (floor > fireFloor) baseRiskScore += 70;
-                    else baseRiskScore += 40;
+function saveRoomData() {
+  if (!currentSelectedRoom) return;
+  hospitalData[currentSelectedRoom] = {
+    A: parseInt(document.getElementById('edit_A').value) || 0,
+    B: parseInt(document.getElementById('edit_B').value) || 0,
+    C: parseInt(document.getElementById('edit_C').value) || 0,
+    D: parseInt(document.getElementById('edit_D').value) || 0
+  };
+  renderRooms();
+}
 
-                    // 환자 중증도별 환산식 적용
-                    let roomDangerWeight = (data.A * 50) + (data.D * 40) + (data.B * 30) + (data.C * 10);
-                    let finalRoomScore = baseRiskScore + roomDangerWeight;
+function randomizePatients() {
+  for (let key in hospitalData) {
+    hospitalData[key] = {
+      A: Math.floor(Math.random() * 4),
+      B: Math.floor(Math.random() * 3),
+      C: Math.floor(Math.random() * 4),
+      D: Math.floor(Math.random() * 3)
+    };
+  }
+  renderRooms();
+}
 
-                    evaluationResults.push({
-                        room: roomKey,
-                        score: finalRoomScore,
-                        details: `와상 ${data.A}/휠체어 ${data.B}/치매 ${data.D}/자립 ${data.C}`
-                    });
-                }
-            }
+// ================= UI 로직 끝 =================
 
-            // 스코어 높은 기준 내림차순 정렬
-            evaluationResults.sort((a, b) => b.score - a.score);
-            const top3 = evaluationResults.slice(0, 3);
+// ================= 유전 알고리즘(GA) 시작 =================
+function getRandom(min, max) {
+  return Math.random() * (max - min) + min;
+}
 
-            // 결과 화면 렌더링
-            const rl = document.getElementById('resultList');
-            rl.innerHTML = "";
+function randomChromosome() {
+  return {
+    fireFloorW: getRandom(0, 120),
+    adjFloorW: getRandom(0, 120),
+    upperFloorW: getRandom(0, 120),
+    lowerFloorW: getRandom(0, 120),
+    wA: getRandom(0, 60),
+    wB: getRandom(0, 60),
+    wD: getRandom(0, 60),
+    wC: getRandom(0, 60)
+  };
+}
 
-            if (top3.length === 0) {
-                rl.innerHTML = "<p>병원 내에 등록된 환자가 없습니다.</p>";
-                return;
-            }
+function getFloorWeight(roomFloor, fireFloor, c) {
+  if (roomFloor === fireFloor) return c.fireFloorW;
+  if (roomFloor === fireFloor + 1) return c.adjFloorW;
+  if (roomFloor > fireFloor) return c.upperFloorW;
+  return c.lowerFloorW;
+}
 
-            top3.forEach((res, idx) => {
-                rl.innerHTML += `
-                    <div class="result-card">
-                        <b>🥇 ${idx + 1}순위 통제 대상: ${res.room}</b><br>
-                        <small>재실자 분포: ${res.details}</small><br>
-                        <small>연산된 위험 적합도 점수: ${res.score}점</small>
-                    </div>
-                `;
-            });
-        }
-    </script>
+function getPatientWeight(data, c) {
+  return data.A * c.wA + data.B * c.wB + data.D * c.wD + data.C * c.wC;
+}
+
+function estimateAttendSeconds(data) {
+  return data.A * 180 + data.B * 60 + data.D * 90 + data.C * 20;
+}
+
+function evaluatePenalty(chromosome) {
+  let totalPenalty = 0;
+
+  let candidateFireFloors = new Set();
+  for (let key in hospitalData) {
+    let d = hospitalData[key];
+    if (d.A + d.B + d.C + d.D > 0) candidateFireFloors.add(parseInt(key.split('층')[0]));
+  }
+
+  candidateFireFloors.forEach(hypoFireFloor => {
+    let rooms = [];
+    for (let key in hospitalData) {
+      let d = hospitalData[key];
+      let total = d.A + d.B + d.C + d.D;
+      if (total === 0) continue;
+      let floor = parseInt(key.split('층')[0]);
+      let score = getFloorWeight(floor, hypoFireFloor, chromosome) + getPatientWeight(d, chromosome);
+      rooms.push({ floor, data: d, score });
+    }
+
+    rooms.sort((a, b) => b.score - a.score);
+
+    let elapsed = 0;
+    rooms.forEach(r => {
+      elapsed += estimateAttendSeconds(r.data);
+      if (r.floor === hypoFireFloor) totalPenalty += elapsed * 2;
+      else if (Math.abs(r.floor - hypoFireFloor) === 1) totalPenalty += elapsed * 1.5;
+      else totalPenalty += elapsed;
+    });
+  });
+
+  return totalPenalty;
+}
+
+function crossover(a, b) {
+  const pick = (x, y) => Math.random() > 0.5 ? x : y;
+  return {
+    fireFloorW: pick(a.fireFloorW, b.fireFloorW),
+    adjFloorW: pick(a.adjFloorW, b.adjFloorW),
+    upperFloorW: pick(a.upperFloorW, b.upperFloorW),
+    lowerFloorW: pick(a.lowerFloorW, b.lowerFloorW),
+    wA: pick(a.wA, b.wA),
+    wB: pick(a.wB, b.wB),
+    wD: pick(a.wD, b.wD),
+    wC: pick(a.wC, b.wC)
+  };
+}
+
+function mutate(c) {
+  const keys = ["fireFloorW", "adjFloorW", "upperFloorW", "lowerFloorW", "wA", "wB", "wD", "wC"];
+  keys.forEach(k => {
+    if (Math.random() < 0.1) c[k] = k.startsWith("w") ? getRandom(0, 60) : getRandom(0, 120);
+  });
+}
+
+function runGeneticAlgorithm() {
+  const popSize = 30;
+  const generations = 40;
+
+  let population = [];
+  for (let i = 0; i < popSize; i++) population.push(randomChromosome());
+
+  for (let gen = 0; gen < generations; gen++) {
+    population.forEach(c => c.penalty = evaluatePenalty(c));
+    population.sort((a, b) => a.penalty - b.penalty);
+
+    let parents = population.slice(0, popSize / 2);
+    let next = [];
+    while (next.length < popSize) {
+      let pa = parents[Math.floor(Math.random() * parents.length)];
+      let pb = parents[Math.floor(Math.random() * parents.length)];
+      let child = crossover(pa, pb);
+      mutate(child);
+      next.push(child);
+    }
+    population = next;
+  }
+
+  population.forEach(c => c.penalty = evaluatePenalty(c));
+  population.sort((a, b) => a.penalty - b.penalty);
+  return population[0];
+}
+
+// ================= 유전 알고리즘(GA) 끝 =================
+
+// ================= 결과 출력 UI 시작 =================
+function runEvacuationAI() {
+  const fireFloor = parseInt(document.getElementById('fireFloor').value);
+  const best = runGeneticAlgorithm();
+
+  let results = [];
+  for (let key in hospitalData) {
+    let d = hospitalData[key];
+    let total = d.A + d.B + d.C + d.D;
+    if (total === 0) continue;
+    let floor = parseInt(key.split('층')[0]);
+    let score = getFloorWeight(floor, fireFloor, best) + getPatientWeight(d, best);
+    results.push({ room: key, score, details: `와상 ${d.A}/휠체어 ${d.B}/치매 ${d.D}/자립 ${d.C}` });
+  }
+
+  results.sort((a, b) => b.score - a.score);
+  const top3 = results.slice(0, 3);
+
+  const rl = document.getElementById('resultList');
+  rl.innerHTML = "";
+
+  if (top3.length === 0) {
+    rl.innerHTML = "<p>병원 내에 등록된 환자가 없습니다.</p>";
+    return;
+  }
+
+  top3.forEach((res, idx) => {
+    rl.innerHTML += `
+      <div class="result-card">
+        <b>🥇 ${idx + 1}순위 통제 대상: ${res.room}</b><br>
+        <small>재실자 분포: ${res.details}</small><br>
+        <small>연산된 위험 적합도 점수: ${res.score.toFixed(1)}점</small>
+      </div>`;
+  });
+
+  rl.innerHTML += `
+    <div class="weight-box">
+      <b>🧬 이번에 AI가 찾아낸 가중치</b><br>
+      화재층: ${best.fireFloorW.toFixed(1)} / 직상층: ${best.adjFloorW.toFixed(1)} /
+      그외상층: ${best.upperFloorW.toFixed(1)} / 하부층: ${best.lowerFloorW.toFixed(1)}<br>
+      와상: ${best.wA.toFixed(1)} / 휠체어: ${best.wB.toFixed(1)} /
+      치매: ${best.wD.toFixed(1)} / 자립: ${best.wC.toFixed(1)}
+    </div>`;
+}
+// ================= 결과 출력 UI 끝 =================
+</script>
 </body>
 </html>
