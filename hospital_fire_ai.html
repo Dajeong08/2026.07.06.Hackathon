@@ -1,61 +1,61 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<title>요양병원 방별 화재 관제 시스템 (GA 버전)</title>
-<style>
-body { font-family: sans-serif; margin: 20px; }
-.flex-container { display: flex; gap: 30px; }
-.control-box { border: 2px solid #ccc; padding: 15px; width: 350px; }
-.room-grid { display: grid; grid-template-columns: repeat(3, 100px); gap: 10px; margin-top: 15px; }
-.room-btn { width: 100px; height: 60px; cursor: pointer; text-align: center; }
-.result-card { border-left: 4px solid red; background: #f9f9f9; padding: 10px; margin-bottom: 10px; }
-.weight-box { background: #eef; padding: 10px; margin-top: 15px; font-size: 13px; border-radius: 6px; }
-</style>
+<!DOCTYPE html> <!--HTML5 문서 선언-->
+<html lang="ko"> <!-- 문서 언어를 한국어로 설정 -->
+<head> <!-- <head> 웹 페이지의 설정과 정보를 담당 <head> -->
+  <meta charset="UTF-8"> <!-- 문자 인코딩을 UTF-8로 설정 -->
+  <title>요양병원 방별 화재 관제 시스템 (GA 버전)</title> <!-- 웹 페이지 제목을 설정 -->
+  <style> /* 웹 페이지의 디자인을 설정 */ 
+    body { font-family: sans-serif; margin: 20px; } /* 폰트를 고딕 계열로 설정하고 문서의 가장자리 여백을 20px 준다. */ 
+    .flex-container { display: flex; gap: 30px; } /* 배치된 요소의 레이아웃을 세로가 아닌 가로로 배열하고 요소들 사이의 간격을 30px 준다. */
+    .control-box { border: 2px solid #cccccc; padding: 15px; width: 350px; } /* 테두리의 두깨를 2px로 설정, 테두리 색상:cccccc 설정, 안쪽 여백을 15px 설정, 너비를 350px로 설정 */
+    .room-grid { display: grid; grid-template-columns: repeat(3, 100px); gap: 10px; margin-top: 15px; } /* 레이아웃을 그리드로 설정하고 가로 100px 3칸씩 자동 줄바꿈으로 설정, 각 요소 사이에 10px 여백, 상단 여백을 15px 준다. */
+    .room-btn { width: 100px; height: 60px; cursor: pointer; text-align: center; } /* 가로 100px, 세로 60px의 버튼을 생성하고 마우스 커서를 포인터로 변경, 텍스트를 중앙 정렬 */
+    .result-card { border-left: 4px solid red; background: #f9f9f9; padding: 10px; margin-bottom: 10px; } /* 왼쪽에 빨간색 선 긋기, 배경색 : #f9f9f9, 안쪽 여백을 10px, 하단 여백을 10px 준다. */
+    .weight-box { background: #eef; padding: 10px; margin-top: 15px; font-size: 13px; border-radius: 6px; } /* 배경색 : #eef, 안쪽 여백을 10px, 상단 여백을 15px, 글꼴 크기를 13px로 설정, 테두리 모서리를 6px로 둥글게 설정  */
+  </style>
 </head>
-<body>
+<body> <!-- 웹페이지에 보이는 부분 -->
 
 <!-- ================= UI 영역 시작 ================= -->
 
-<h2>🚨 요양병원 방별 화재 대피 관제 시스템 (GA 버전)</h2>
-<hr>
+<h2>🚨 요양병원 방별 화재 대피 관제 시스템 (GA 버전)</h2> <!-- 맨 위 제목 텍스트 -->
+<hr> <!-- 구분선 -->
 
-<div class="flex-container">
+<div class="flex-container"> <!-- 각 구역을 가로로 정렬하는 칸 -->
 
-  <div>
-    <h3>🏢 건물 관리 컨트롤러</h3>
-    <div>
-      <label>🔥 화재 발생 층: </label>
-      <select id="fireFloor">
-        <option value="1">1층</option>
-        <option value="2" selected>2층</option>
-        <option value="3">3층</option>
-        <option value="4">4층</option>
+  <div> <!-- 건물 관리 컨트롤러 구역 시작 -->
+    <h3>🏢 건물 관리 컨트롤러</h3> <!-- 구역 제목 텍스트 -->
+    <div> <!-- 화재 발생 층 선택, 층 추가, 환자 랜덤 배치 버튼 구역 -->
+      <label>🔥 화재 발생 층: </label> <!-- 드롭다운 앞에 붙는 설명 라벨 -->
+      <select id="fireFloor"> <!-- 사용자가 "가상으로 불이 난 층"을 고르는 드롭다운. id="fireFloor"로 나중에 스크립트에서 값을 읽어감 -->
+        <option value="1">1층</option> <!-- 선택지: 1층 -->
+        <option value="2" selected>2층</option> <!-- 선택지: 2층, 페이지 로드시 기본 선택값 -->
+        <option value="3">3층</option> <!-- 선택지: 3층 -->
+        <option value="4">4층</option> <!-- 선택지: 4층 -->
       </select>
-      <button onclick="addFloor()">➕ 층 추가</button>
-      <button onclick="randomizePatients()">🎲 환자 랜덤 배치</button>
+      <button onclick="addFloor()">➕ 층 추가</button> <!-- 클릭하면 addFloor() 함수 호출 → 건물 최고층수(maxFloor)를 1 늘리고 새 층의 방 데이터를 만들어줌 -->
+      <button onclick="randomizePatients()">🎲 환자 랜덤 배치</button> <!-- 클릭하면 randomizePatients() 함수 호출 → 모든 방에 무작위 인원수를 채워서 테스트하기 쉽게 해줌 -->
     </div>
 
-    <h4>📍 현재 볼 층 선택</h4>
-    <div id="floorSelector"></div>
+    <h4>📍 현재 볼 층 선택</h4> <!-- 아래에 층 선택 버튼들이 렌더링될 구역의 제목 -->
+    <div id="floorSelector"></div> <!-- 비어있는 껍데기 div. renderFloorButtons() 함수가 실행될 때 이 안에 층별 버튼(1층,2층...)이 채워짐 -->
 
-    <h4><span id="currentViewFloorLabel">2</span>층 내부 방 배치도 (방을 클릭하세요)</h4>
-    <div id="roomContainer" class="room-grid"></div>
+    <h4><span id="currentViewFloorLabel">2</span>층 내부 방 배치도 (방을 클릭하세요)</h4> <!-- 현재 보고 있는 층 번호를 표시하는 라벨. changeViewFloor()가 호출되면 이 숫자가 갱신됨 -->
+    <div id="roomContainer" class="room-grid"></div> <!-- 비어있는 껍데기 div. renderRooms() 함수가 실행될 때 이 안에 방 버튼(1호~6호)들이 채워짐 -->
 
     <br>
-    <button onclick="runEvacuationAI()" style="width:320px; height:40px; font-weight:bold;">🧬 AI 최우선 대피 순위 분석 가동</button>
-  </div>
+    <button onclick="runEvacuationAI()" style="width:320px; height:40px; font-weight:bold;">🧬 AI 최우선 대피 순위 분석 가동</button> <!-- 클릭하면 runEvacuationAI() 함수 호출 → 유전 알고리즘(GA)을 돌려서 가장 위험한 방 TOP3를 계산하고 화면에 출력함 -->
+  </div> <!-- 건물 관리 컨트롤러 구역 종료 -->
 
-  <div class="control-box">
-    <h3>📝 <span id="selectedRoomLabel">선택 없음</span> 환자 편집</h3>
-    <div id="editorInputs"><p>방을 선택하면 입력창이 활성화됩니다.</p></div>
+  <div class="control-box"> <!-- 방 하나를 선택했을 때 인원수를 편집하는 패널 시작 -->
+    <h3>📝 <span id="selectedRoomLabel">선택 없음</span> 환자 편집</h3> <!-- 현재 선택된 방 이름을 보여주는 제목. selectRoom()이 호출되면 이 텍스트가 방 이름(예: 2층-3호)으로 바뀜 -->
+    <div id="editorInputs"><p>방을 선택하면 입력창이 활성화됩니다.</p></div> <!-- 비어있는(기본 안내문구만 있는) div. selectRoom() 함수가 실행되면 이 안에 A/B/C/D 인원수 입력창이 채워짐 -->
     <br>
-    <button id="saveBtn" onclick="saveRoomData()" disabled style="width:100%;">💾 현재 방 데이터 저장</button>
+    <button id="saveBtn" onclick="saveRoomData()" disabled style="width:100%;">💾 현재 방 데이터 저장</button> <!-- 클릭하면 saveRoomData() 함수 호출 → 입력창에 적은 숫자들을 hospitalData 객체에 반영(저장)함. 방을 아직 선택 안 했으면 disabled(비활성화) 상태라 눌러도 반응 없음 -->
   </div>
 
-  <div style="flex: 1;">
-    <h3>⚡ 최우선 대피 지시서 (TOP 3 위험 방)</h3>
-    <div id="resultList"><p style="color:#666;">분석 버튼을 누르면 가장 위험한 방 3곳이 정렬됩니다.</p></div>
+  <div style="flex: 1;"> <!-- 분석 결과(위험 순위)를 보여주는 오른쪽 패널 -->
+    <h3>⚡ 최우선 대피 지시서 (TOP 3 위험 방)</h3> <!-- 결과 패널 제목 -->
+    <div id="resultList"><p style="color:#666;">분석 버튼을 누르면 가장 위험한 방 3곳이 정렬됩니다.</p></div> <!-- 비어있는(안내문구만 있는) div. runEvacuationAI() 함수가 실행되면 이 안에 TOP3 결과 카드와 가중치 정보가 채워짐 -->
   </div>
 
 </div>
@@ -65,253 +65,256 @@ body { font-family: sans-serif; margin: 20px; }
 <script>
 // ================= 데이터 상태 & UI 로직 시작 =================
 // 전역 변수 설정
-let maxFloor = 4; // 지금 건물에 층이 몇층이 있는지(초기 : 4)
-let currentViewFloor = 2; // 현재 볼 층 선택(초기 : 2)
-let currentSelectedRoom = null; // 현재 선택된 방(초기 : 없음)
-let hospitalData = {}; // 병원 각 방의 데이터를 담는 딕셔너리
+let maxFloor = 4; // 지금 건물에 층이 몇층이 있는지(초기 : 4). addFloor() 호출될 때마다 1씩 증가함
+let currentViewFloor = 2; // 현재 화면에서 보고 있는 층(초기 : 2). changeViewFloor()가 호출되면 이 값이 바뀜
+let currentSelectedRoom = null; // 현재 선택된 방의 key값(예: "2층-3호")을 저장. 처음엔 선택된 방이 없으므로 null
+let hospitalData = {}; // 병원의 모든 방 데이터를 담는 딕셔너리(객체). key는 "층-호수", value는 {A,B,C,D} 인원수 객체
 
-window.onload = function () { // 페이지가 새로 로딩될 때 실행 
-  for (let f = 1; f <= maxFloor; f++) createFloorData(f); // createFloorData(1~4)까지 반복 
-  renderFloorButtons(); // renderFloorButtons 호출 
-  renderRooms(); // renderRooms 호출 
+window.onload = function () { // 웹페이지의 모든 요소가 로딩을 마친 직후 자동으로 한 번 실행되는 초기화 함수
+  for (let f = 1; f <= maxFloor; f++) createFloorData(f); // 1층부터 maxFloor(4)층까지 반복하면서 createFloorData()를 호출 → 각 층의 방 데이터를 hospitalData에 미리 만들어 넣음(초기값 0명)
+  renderFloorButtons(); // renderFloorButtons() 호출 → "1층/2층/3층/4층" 버튼들을 화면(floorSelector)에 그려줌
+  renderRooms(); // renderRooms() 호출 → 현재 선택된 층(초기값 2층)의 방 버튼(1호~6호)들을 화면(roomContainer)에 그려줌
 };
 
-function createFloorData(f) { // onload에서 f를 1~4만큼 반복 
-  for (let r = 1; r <= 6; r++) { // r을 1~6
-    let key = `${f}층-${r}호`;
-    if (!hospitalData[key]) hospitalData[key] = { A: 0, B: 0, C: 0, D: 0 };
+function createFloorData(f) { // 특정 층(f)에 해당하는 방 데이터를 hospitalData에 생성해주는 함수. onload에서 층 개수만큼 반복 호출됨, addFloor()에서도 새 층을 만들 때 호출됨
+  for (let r = 1; r <= 6; r++) { // 방 번호 r을 1호부터 6호까지 반복 (한 층에 방 6개 고정)
+    let key = `${f}층-${r}호`; // 예: "2층-3호" 같은 형태의 고유 키 문자열 생성
+    if (!hospitalData[key]) hospitalData[key] = { A: 0, B: 0, C: 0, D: 0 }; // 만약 해당 키의 데이터가 아직 없다면(중복 생성 방지), 와상(A)/휠체어(B)/자립(C)/치매(D) 인원수를 모두 0으로 초기화해서 넣어줌
   }
 }
 
-function addFloor() {
-  maxFloor++;
-  createFloorData(maxFloor);
-  renderFloorButtons();
+function addFloor() { // "➕ 층 추가" 버튼을 눌렀을 때 호출되는 함수. 건물에 층을 하나 더 늘리는 역할
+  maxFloor++; // 전역변수 maxFloor를 1 증가시켜서 건물의 최고층을 늘림
+  createFloorData(maxFloor); // 방금 늘어난 새 층 번호(maxFloor)에 대해 createFloorData()를 호출 → 새 층의 방 데이터(6개 방, 각각 0명)를 hospitalData에 생성
+  renderFloorButtons(); // 층이 하나 늘었으므로 renderFloorButtons()를 다시 호출해서 층 선택 버튼 목록을 새로 그려 새로 추가된 층 버튼이 보이게 함
 }
 
-function renderFloorButtons() {
-  const el = document.getElementById('floorSelector');
-  el.innerHTML = "";
-  for (let f = 1; f <= maxFloor; f++) {
-    el.innerHTML += `<button onclick="changeViewFloor(${f})" style="margin-right:5px; font-weight:${f === currentViewFloor ? 'bold' : 'normal'}">${f}층</button>`;
+function renderFloorButtons() { // "현재 볼 층 선택" 영역에 층 버튼들(1층,2층,3층...)을 그려주는 함수. addFloor()나 changeViewFloor(), onload에서 호출됨
+  const el = document.getElementById('floorSelector'); // floorSelector라는 id를 가진 div 요소를 찾아옴
+  el.innerHTML = ""; // 기존에 그려져 있던 버튼들을 모두 지움(다시 그리기 전 초기화)
+  for (let f = 1; f <= maxFloor; f++) { // 1층부터 현재 maxFloor까지 반복하면서 버튼을 하나씩 생성
+    el.innerHTML += `<button onclick="changeViewFloor(${f})" style="margin-right:5px; font-weight:${f === currentViewFloor ? 'bold' : 'normal'}">${f}층</button>`; // 버튼 하나 추가. 클릭하면 changeViewFloor(f) 호출되도록 설정. 현재 보고 있는 층이면 글씨를 굵게(bold) 표시해서 강조
   }
 }
 
-function changeViewFloor(f) {
-  currentViewFloor = f;
-  document.getElementById('currentViewFloorLabel').innerText = f;
-  renderFloorButtons();
-  renderRooms();
+function changeViewFloor(f) { // 층 버튼을 클릭했을 때 호출되는 함수. "지금 화면에 어느 층 방들을 보여줄지"를 바꿔주는 역할
+  currentViewFloor = f; // 전역변수 currentViewFloor를 클릭한 층 번호(f)로 변경
+  document.getElementById('currentViewFloorLabel').innerText = f; // 화면 제목에 있는 "N층 내부 방 배치도"의 N 부분을 방금 바뀐 층 번호로 갱신
+  renderFloorButtons(); // 선택된 층이 바뀌었으니 renderFloorButtons()를 다시 호출해서 굵게 표시되는 버튼(현재 층 강조)을 갱신
+  renderRooms(); // 보고 있는 층이 바뀌었으니 renderRooms()를 호출해서 그 층에 해당하는 방 버튼들을 새로 그림
 }
 
-function renderRooms() {
-  const el = document.getElementById('roomContainer');
-  el.innerHTML = "";
-  for (let r = 1; r <= 6; r++) {
-    let key = `${currentViewFloor}층-${r}호`;
-    let d = hospitalData[key];
-    let total = d.A + d.B + d.C + d.D;
-    el.innerHTML += `<button class="room-btn" onclick="selectRoom('${key}')"><b>${r}호</b><br>(총 ${total}명)</button>`;
+function renderRooms() { // 현재 선택된 층(currentViewFloor)의 방 버튼 6개를 화면에 그려주는 함수. changeViewFloor(), saveRoomData(), randomizePatients(), onload에서 호출됨
+  const el = document.getElementById('roomContainer'); // roomContainer라는 id를 가진 div(방 버튼들이 들어갈 그리드 영역)를 찾아옴
+  el.innerHTML = ""; // 기존에 그려져 있던 방 버튼들을 모두 지움(다시 그리기 전 초기화)
+  for (let r = 1; r <= 6; r++) { // 방 번호 r을 1호부터 6호까지 반복
+    let key = `${currentViewFloor}층-${r}호`; // 현재 보고 있는 층 기준으로 방의 고유 키를 생성 (예: "2층-3호")
+    let d = hospitalData[key]; // hospitalData에서 해당 방의 인원수 데이터({A,B,C,D})를 가져옴
+    let total = d.A + d.B + d.C + d.D; // 그 방에 있는 전체 인원수를 계산 (와상+휠체어+자립+치매 합계)
+    el.innerHTML += `<button class="room-btn" onclick="selectRoom('${key}')"><b>${r}호</b><br>(총 ${total}명)</button>`; // 방 버튼을 하나 추가. 방 번호와 총 인원수를 표시하고, 클릭하면 selectRoom(key)를 호출해서 이 방을 편집 대상으로 선택하게 함
   }
 }
 
-function selectRoom(key) {
-  currentSelectedRoom = key;
-  document.getElementById('selectedRoomLabel').innerText = key;
-  const d = hospitalData[key];
+function selectRoom(key) { // 방 버튼을 클릭했을 때 호출되는 함수. 해당 방을 "현재 편집 중인 방"으로 지정하고 편집창을 띄워주는 역할
+  currentSelectedRoom = key; // 전역변수 currentSelectedRoom에 방금 클릭한 방의 key를 저장 (나중에 saveRoomData()에서 이 값을 사용)
+  document.getElementById('selectedRoomLabel').innerText = key; // 편집 패널 제목에 있는 "선택 없음" 부분을 실제 선택된 방 이름(예: "2층-3호")으로 변경
+  const d = hospitalData[key]; // 선택한 방의 현재 인원수 데이터({A,B,C,D})를 가져옴
+  // editorInputs div 안의 내용을 아래 입력창들로 교체
   document.getElementById('editorInputs').innerHTML = `
-    <p>와상(A): <input type="number" id="edit_A" value="${d.A}" min="0" style="width:60px;"> 명</p>
-    <p>휠체어(B): <input type="number" id="edit_B" value="${d.B}" min="0" style="width:60px;"> 명</p>
-    <p>자립(C): <input type="number" id="edit_C" value="${d.C}" min="0" style="width:60px;"> 명</p>
-    <p>치매(D): <input type="number" id="edit_D" value="${d.D}" min="0" style="width:60px;"> 명</p>`;
-  document.getElementById('saveBtn').disabled = false;
+    <p>와상(A): <input type="number" id="edit_A" value="${d.A}" min="0" style="width:60px;"> 명</p> <!-- 와상 환자 수 입력창. 현재 값(d.A)을 기본값으로 보여줌 -->
+    <p>휠체어(B): <input type="number" id="edit_B" value="${d.B}" min="0" style="width:60px;"> 명</p> <!-- 휠체어 환자 수 입력창 -->
+    <p>자립(C): <input type="number" id="edit_C" value="${d.C}" min="0" style="width:60px;"> 명</p> <!-- 자립 가능 환자 수 입력창 -->
+    <p>치매(D): <input type="number" id="edit_D" value="${d.D}" min="0" style="width:60px;"> 명</p> <!-- 치매 환자 수 입력창 --> `;
+  document.getElementById('saveBtn').disabled = false; // 방을 선택했으니 지금까지 비활성화(disabled) 상태였던 "저장" 버튼을 눌러도 동작하도록 활성화시킴
 }
 
-function saveRoomData() {
-  if (!currentSelectedRoom) return;
-  hospitalData[currentSelectedRoom] = {
-    A: parseInt(document.getElementById('edit_A').value) || 0,
-    B: parseInt(document.getElementById('edit_B').value) || 0,
-    C: parseInt(document.getElementById('edit_C').value) || 0,
-    D: parseInt(document.getElementById('edit_D').value) || 0
+function saveRoomData() { // "💾 현재 방 데이터 저장" 버튼을 눌렀을 때 호출되는 함수. 입력창에 적힌 값들을 실제 데이터(hospitalData)에 반영하는 역할
+  if (!currentSelectedRoom) return; // 만약 선택된 방이 없다면(currentSelectedRoom이 null이면) 아무 것도 하지 않고 함수 종료 (안전장치)
+  hospitalData[currentSelectedRoom] = { // 현재 선택된 방의 데이터를 아래 4개의 입력값으로 통째로 덮어씀
+    A: parseInt(document.getElementById('edit_A').value) || 0, // 와상 입력창 값을 정수로 변환. 값이 없거나 잘못됐으면(NaN) 0으로 대체
+    B: parseInt(document.getElementById('edit_B').value) || 0, // 휠체어 입력창 값을 정수로 변환, 이상값이면 0
+    C: parseInt(document.getElementById('edit_C').value) || 0, // 자립 입력창 값을 정수로 변환, 이상값이면 0
+    D: parseInt(document.getElementById('edit_D').value) || 0  // 치매 입력창 값을 정수로 변환, 이상값이면 0
   };
-  renderRooms();
+  renderRooms(); // 데이터가 바뀌었으니 renderRooms()를 다시 호출해서 방 버튼에 표시되는 "총 N명" 숫자를 최신 값으로 갱신
 }
 
-function randomizePatients() {
-  for (let key in hospitalData) {
-    hospitalData[key] = {
-      A: Math.floor(Math.random() * 4),
-      B: Math.floor(Math.random() * 3),
-      C: Math.floor(Math.random() * 4),
-      D: Math.floor(Math.random() * 3)
+function randomizePatients() { // "🎲 환자 랜덤 배치" 버튼을 눌렀을 때 호출되는 함수. 모든 방의 인원수를 무작위 값으로 채워서 테스트 데이터를 빠르게 만들어주는 역할
+  for (let key in hospitalData) { // hospitalData에 있는 모든 방(key)에 대해 반복
+    hospitalData[key] = { // 해당 방의 데이터를 무작위 숫자로 덮어씀
+      A: Math.floor(Math.random() * 4), // 와상 인원을 0~3명 사이 무작위로 설정
+      B: Math.floor(Math.random() * 3), // 휠체어 인원을 0~2명 사이 무작위로 설정
+      C: Math.floor(Math.random() * 4), // 자립 인원을 0~3명 사이 무작위로 설정
+      D: Math.floor(Math.random() * 3)  // 치매 인원을 0~2명 사이 무작위로 설정
     };
   }
-  renderRooms();
+  renderRooms(); // 모든 방의 인원수가 바뀌었으니 renderRooms()를 호출해서 화면의 방 버튼들을 최신 총인원수로 다시 그림
 }
 
 // ================= UI 로직 끝 =================
 
 // ================= 유전 알고리즘(GA) 시작 =================
-function getRandom(min, max) {
-  return Math.random() * (max - min) + min;
+function getRandom(min, max) { // min과 max 사이의 무작위 실수(소수점 포함) 하나를 반환하는 유틸리티 함수. 염색체(가중치 조합)를 만들 때마다 호출됨
+  return Math.random() * (max - min) + min; // 0~1 사이 난수를 (max-min) 범위로 늘린 뒤 min을 더해서 [min, max] 범위의 값으로 변환
 }
 
-function randomChromosome() {
+function randomChromosome() { // 무작위 "염색체"(=가중치 세트) 하나를 새로 생성하는 함수. runGeneticAlgorithm()에서 초기 세대(population)를 만들 때 반복 호출됨
   return {
-    fireFloorW: getRandom(0, 120),
-    adjFloorW: getRandom(0, 120),
-    upperFloorW: getRandom(0, 120),
-    lowerFloorW: getRandom(0, 120),
-    wA: getRandom(0, 60),
-    wB: getRandom(0, 60),
-    wD: getRandom(0, 60),
-    wC: getRandom(0, 60)
+    fireFloorW: getRandom(0, 120),  // 화재가 난 바로 그 층에 부여할 위험 가중치를 0~120 사이 무작위로 설정
+    adjFloorW: getRandom(0, 120),   // 화재층의 바로 위층(직상층)에 부여할 위험 가중치를 무작위로 설정
+    upperFloorW: getRandom(0, 120), // 화재층보다 위에 있지만 직상층은 아닌 그 외 상층에 부여할 가중치를 무작위로 설정
+    lowerFloorW: getRandom(0, 120), // 화재층보다 아래에 있는 층(하부층)에 부여할 가중치를 무작위로 설정
+    wA: getRandom(0, 60), // 와상 환자 1명당 위험 가중치를 무작위로 설정
+    wB: getRandom(0, 60), // 휠체어 환자 1명당 위험 가중치를 무작위로 설정
+    wD: getRandom(0, 60), // 치매 환자 1명당 위험 가중치를 무작위로 설정
+    wC: getRandom(0, 60)  // 자립 환자 1명당 위험 가중치를 무작위로 설정
   };
 }
 
-function getFloorWeight(roomFloor, fireFloor, c) {
-  if (roomFloor === fireFloor) return c.fireFloorW;
-  if (roomFloor === fireFloor + 1) return c.adjFloorW;
-  if (roomFloor > fireFloor) return c.upperFloorW;
-  return c.lowerFloorW;
+function getFloorWeight(roomFloor, fireFloor, c) { // 어떤 방이 있는 층(roomFloor)이 화재층(fireFloor) 기준으로 어떤 위치인지 판별해서 해당 가중치를 돌려주는 함수. evaluatePenalty()와 runEvacuationAI()에서 방마다 호출됨
+  if (roomFloor === fireFloor) return c.fireFloorW; // 방이 화재가 난 바로 그 층이면 화재층 가중치를 반환
+  if (roomFloor === fireFloor + 1) return c.adjFloorW; // 방이 화재층 바로 위(1개층 위)면 직상층 가중치를 반환
+  if (roomFloor > fireFloor) return c.upperFloorW; // 그 외에 화재층보다 위층이면 상층 가중치를 반환
+  return c.lowerFloorW; // 위 조건에 모두 해당하지 않으면(=화재층보다 아래층) 하부층 가중치를 반환
 }
 
-function getPatientWeight(data, c) {
-  return data.A * c.wA + data.B * c.wB + data.D * c.wD + data.C * c.wC;
+function getPatientWeight(data, c) { // 방 안의 환자 구성(data)에 따라 위험 점수를 계산해주는 함수. 각 환자 유형 인원수에 해당 가중치를 곱해서 모두 더함
+  return data.A * c.wA + data.B * c.wB + data.D * c.wD + data.C * c.wC; // 와상*wA + 휠체어*wB + 치매*wD + 자립*wC 를 모두 합산해서 반환
 }
 
-function estimateAttendSeconds(data) {
-  return data.A * 180 + data.B * 60 + data.D * 90 + data.C * 20;
+function estimateAttendSeconds(data) { // 방 하나를 대피/구조하는 데 걸릴 것으로 추정되는 시간(초)을 계산하는 함수. 환자 유형별로 다른 소요시간을 가정함
+  return data.A * 180 + data.B * 60 + data.D * 90 + data.C * 20; // 와상 1명당 180초, 휠체어 1명당 60초, 치매 1명당 90초, 자립 1명당 20초로 계산해서 합산 반환
 }
 
-function evaluatePenalty(chromosome) {
-  let totalPenalty = 0;
+function evaluatePenalty(chromosome) { // 특정 가중치 조합(chromosome)이 얼마나 "나쁜"(패널티가 큰) 순위를 만들어내는지 평가하는 함수. GA의 적합도(fitness) 계산 역할이며, 값이 작을수록 좋은 염색체임. runGeneticAlgorithm()에서 각 세대마다 population 전체에 대해 반복 호출됨
+  let totalPenalty = 0; // 전체 패널티 총합을 누적할 변수, 0으로 초기화
 
-  let candidateFireFloors = new Set();
-  for (let key in hospitalData) {
-    let d = hospitalData[key];
-    if (d.A + d.B + d.C + d.D > 0) candidateFireFloors.add(parseInt(key.split('층')[0]));
+  let candidateFireFloors = new Set(); // 화재가 났다고 가정해볼 후보 층들을 중복 없이 저장할 Set 자료구조 생성
+  for (let key in hospitalData) { // hospitalData에 있는 모든 방을 순회
+    let d = hospitalData[key]; // 해당 방의 인원 데이터를 가져옴
+    if (d.A + d.B + d.C + d.D > 0) candidateFireFloors.add(parseInt(key.split('층')[0])); // 그 방에 환자가 1명이라도 있으면, 그 방이 속한 층 번호를 candidateFireFloors에 추가(즉, 사람이 있는 층만 화재 시나리오 후보로 검토)
   }
 
-  candidateFireFloors.forEach(hypoFireFloor => {
-    let rooms = [];
-    for (let key in hospitalData) {
-      let d = hospitalData[key];
-      let total = d.A + d.B + d.C + d.D;
-      if (total === 0) continue;
-      let floor = parseInt(key.split('층')[0]);
-      let score = getFloorWeight(floor, hypoFireFloor, chromosome) + getPatientWeight(d, chromosome);
-      rooms.push({ floor, data: d, score });
+  candidateFireFloors.forEach(hypoFireFloor => { // 후보로 뽑힌 각 층을 "가상 화재 발생층(hypoFireFloor)"으로 가정하며 하나씩 시뮬레이션 진행
+    let rooms = []; // 이번 가상 화재 시나리오에서 사용할 방 목록(점수 포함)을 담을 배열
+    for (let key in hospitalData) { // 모든 방을 다시 순회하며 이번 시나리오용 점수를 계산
+      let d = hospitalData[key]; // 방의 인원 데이터
+      let total = d.A + d.B + d.C + d.D; // 방의 총 인원수
+      if (total === 0) continue; // 사람이 없는 빈 방은 계산할 필요 없으므로 건너뜀
+      let floor = parseInt(key.split('층')[0]); // 이 방이 있는 층 번호를 추출
+      let score = getFloorWeight(floor, hypoFireFloor, chromosome) + getPatientWeight(d, chromosome); // getFloorWeight() 호출 → 이 방 층이 가상화재층 기준 몇층 관계인지에 따른 가중치를 얻고, getPatientWeight() 호출 → 이 방 환자 구성에 따른 가중치를 얻어서 두 값을 합산 = 이 방의 위험 점수
+      rooms.push({ floor, data: d, score }); // 계산된 층/데이터/점수를 rooms 배열에 추가
     }
 
-    rooms.sort((a, b) => b.score - a.score);
+    rooms.sort((a, b) => b.score - a.score); // 점수가 높은(위험한) 방이 앞에 오도록 내림차순 정렬 → AI가 "이 순서대로 대피/구조하러 간다"고 가정하기 위함
 
-    let elapsed = 0;
-    rooms.forEach(r => {
-      elapsed += estimateAttendSeconds(r.data);
-      if (r.floor === hypoFireFloor) totalPenalty += elapsed * 2;
-      else if (Math.abs(r.floor - hypoFireFloor) === 1) totalPenalty += elapsed * 1.5;
-      else totalPenalty += elapsed;
+    let elapsed = 0; // 대피 시작부터 지금까지 누적된 경과 시간(초)을 담을 변수, 0으로 초기화
+    rooms.forEach(r => { // 정렬된 순서대로(위험한 방부터) 방을 하나씩 처리
+      elapsed += estimateAttendSeconds(r.data); // estimateAttendSeconds() 호출 → 이 방을 처리하는 데 걸리는 시간을 계산해서 누적 경과시간에 더함 (이 방까지 도달, 처리하는 데 걸린 총 시간)
+      if (r.floor === hypoFireFloor) totalPenalty += elapsed * 2; // 만약 이 방이 실제 가상화재층이라면, 누적경과시간에 2배 가중치를 곱해서 패널티에 더함(화재층인데 늦게 도착하면 매우 나쁘다는 뜻)
+      else if (Math.abs(r.floor - hypoFireFloor) === 1) totalPenalty += elapsed * 1.5; // 화재층과 1개 층 차이(바로 위/아래)라면 1.5배 가중치로 패널티 추가
+      else totalPenalty += elapsed; // 그 외 층이면 가중치 없이(1배) 경과시간을 그대로 패널티에 더함
     });
   });
 
-  return totalPenalty;
+  return totalPenalty; // 모든 가상 화재 시나리오에 대한 패널티 총합을 반환. 이 값이 작을수록 이 가중치 조합(chromosome)이 우수한 것으로 평가됨
 }
 
-function crossover(a, b) {
-  const pick = (x, y) => Math.random() > 0.5 ? x : y;
-  return {
-    fireFloorW: pick(a.fireFloorW, b.fireFloorW),
-    adjFloorW: pick(a.adjFloorW, b.adjFloorW),
-    upperFloorW: pick(a.upperFloorW, b.upperFloorW),
-    lowerFloorW: pick(a.lowerFloorW, b.lowerFloorW),
-    wA: pick(a.wA, b.wA),
-    wB: pick(a.wB, b.wB),
-    wD: pick(a.wD, b.wD),
-    wC: pick(a.wC, b.wC)
+function crossover(a, b) { // 부모 염색체 두 개(a, b)를 교배시켜 새로운 자식 염색체를 만드는 함수. runGeneticAlgorithm()에서 다음 세대를 만들 때 반복 호출됨
+  const pick = (x, y) => Math.random() > 0.5 ? x : y; // 두 값 중 하나를 50% 확률로 무작위 선택해주는 내부 헬퍼 함수
+  return { // 각 유전자(가중치 항목)마다 pick()을 호출해서 부모 a 또는 b의 값 중 하나를 물려받은 자식 염색체를 생성
+    fireFloorW: pick(a.fireFloorW, b.fireFloorW), // 화재층 가중치를 부모 중 하나에서 물려받음
+    adjFloorW: pick(a.adjFloorW, b.adjFloorW), // 직상층 가중치를 부모 중 하나에서 물려받음
+    upperFloorW: pick(a.upperFloorW, b.upperFloorW), // 상층 가중치를 부모 중 하나에서 물려받음
+    lowerFloorW: pick(a.lowerFloorW, b.lowerFloorW), // 하부층 가중치를 부모 중 하나에서 물려받음
+    wA: pick(a.wA, b.wA), // 와상 가중치를 부모 중 하나에서 물려받음
+    wB: pick(a.wB, b.wB), // 휠체어 가중치를 부모 중 하나에서 물려받음
+    wD: pick(a.wD, b.wD), // 치매 가중치를 부모 중 하나에서 물려받음
+    wC: pick(a.wC, b.wC)  // 자립 가중치를 부모 중 하나에서 물려받음
   };
 }
 
-function mutate(c) {
-  const keys = ["fireFloorW", "adjFloorW", "upperFloorW", "lowerFloorW", "wA", "wB", "wD", "wC"];
-  keys.forEach(k => {
-    if (Math.random() < 0.1) c[k] = k.startsWith("w") ? getRandom(0, 60) : getRandom(0, 120);
+function mutate(c) { // 염색체(c)에 무작위 돌연변이를 일으키는 함수. crossover()로 만들어진 자식마다 호출되어 다양성을 유지시켜줌(local optimum에 갇히지 않도록)
+  const keys = ["fireFloorW", "adjFloorW", "upperFloorW", "lowerFloorW", "wA", "wB", "wD", "wC"]; // 돌연변이를 적용할 수 있는 모든 유전자(가중치 항목) 이름 목록
+  keys.forEach(k => { // 각 유전자 항목에 대해 반복
+    if (Math.random() < 0.1) c[k] = k.startsWith("w") ? getRandom(0, 60) : getRandom(0, 120); // 10% 확률로 돌연변이 발생: 항목 이름이 "w"로 시작하면(환자 유형 가중치) 0~60 범위, 아니면(층 가중치) 0~120 범위에서 getRandom()을 호출해 새로운 무작위 값으로 덮어씀
   });
 }
 
-function runGeneticAlgorithm() {
-  const popSize = 30;
-  const generations = 40;
+function runGeneticAlgorithm() { // 실제로 유전 알고리즘을 처음부터 끝까지 수행해서 가장 좋은 가중치 조합(염색체)을 찾아 반환하는 함수. runEvacuationAI()에서 호출됨
+  const popSize = 30; // 한 세대에 존재할 염색체(가중치 조합) 개체 수를 30으로 설정
+  const generations = 40; // 세대를 총 몇 번 반복해서 진화시킬지 40으로 설정
 
-  let population = [];
-  for (let i = 0; i < popSize; i++) population.push(randomChromosome());
+  let population = []; // 현재 세대의 개체(염색체)들을 담을 배열, 빈 배열로 시작
+  for (let i = 0; i < popSize; i++) population.push(randomChromosome()); // randomChromosome()을 30번 호출해서 무작위 초기 개체군(1세대)을 생성
 
-  for (let gen = 0; gen < generations; gen++) {
-    population.forEach(c => c.penalty = evaluatePenalty(c));
-    population.sort((a, b) => a.penalty - b.penalty);
+  for (let gen = 0; gen < generations; gen++) { // 세대를 0부터 39까지, 즉 40번 반복하며 진화 과정을 수행
+    population.forEach(c => c.penalty = evaluatePenalty(c)); // 현재 세대의 모든 개체에 대해 evaluatePenalty()를 호출 → 각 염색체의 패널티(적합도) 점수를 계산해서 저장
+    population.sort((a, b) => a.penalty - b.penalty); // 패널티가 낮은(=더 좋은) 개체가 앞에 오도록 오름차순 정렬
 
-    let parents = population.slice(0, popSize / 2);
-    let next = [];
-    while (next.length < popSize) {
-      let pa = parents[Math.floor(Math.random() * parents.length)];
-      let pb = parents[Math.floor(Math.random() * parents.length)];
-      let child = crossover(pa, pb);
-      mutate(child);
-      next.push(child);
+    let parents = population.slice(0, popSize / 2); // 정렬된 개체 중 상위 절반(패널티가 낮은, 즉 우수한 개체들)만 부모 후보로 선발
+    let next = []; // 다음 세대를 담을 새 배열
+    while (next.length < popSize) { // 다음 세대 개체 수가 popSize(30)에 도달할 때까지 반복
+      let pa = parents[Math.floor(Math.random() * parents.length)]; // 부모 후보 중 하나를 무작위로 선택 (부모 A)
+      let pb = parents[Math.floor(Math.random() * parents.length)]; // 부모 후보 중 하나를 무작위로 선택 (부모 B)
+      let child = crossover(pa, pb); // crossover() 호출 → 두 부모를 교배시켜 자식 염색체 하나를 생성
+      mutate(child); // mutate() 호출 → 방금 만든 자식 염색체에 무작위 돌연변이를 적용해서 다양성 확보
+      next.push(child); // 완성된 자식을 다음 세대 배열(next)에 추가
     }
-    population = next;
+    population = next; // 이번 세대가 끝났으니 population을 방금 만든 다음 세대(next)로 교체
   }
 
-  population.forEach(c => c.penalty = evaluatePenalty(c));
-  population.sort((a, b) => a.penalty - b.penalty);
-  return population[0];
+  population.forEach(c => c.penalty = evaluatePenalty(c)); // 40세대 진화가 모두 끝난 뒤, 마지막 세대의 모든 개체에 대해 다시 한번 evaluatePenalty()를 호출해서 최종 패널티를 계산
+  population.sort((a, b) => a.penalty - b.penalty); // 최종 세대를 패널티 오름차순(우수한 순)으로 정렬
+  return population[0]; // 패널티가 가장 낮은(=가장 우수한) 1등 염색체를 반환
 }
 
 // ================= 유전 알고리즘(GA) 끝 =================
 
 // ================= 결과 출력 UI 시작 =================
-function runEvacuationAI() {
-  const fireFloor = parseInt(document.getElementById('fireFloor').value);
-  const best = runGeneticAlgorithm();
+function runEvacuationAI() { // "🧬 AI 최우선 대피 순위 분석 가동" 버튼을 눌렀을 때 호출되는 함수. GA를 실행해서 최적 가중치를 구하고, 그 가중치로 실제 화재 상황의 방 순위를 계산해 화면에 출력하는 메인 함수
+  const fireFloor = parseInt(document.getElementById('fireFloor').value); // 화면 상단 드롭다운에서 사용자가 선택한 실제 화재 발생 층 번호를 읽어옴
+  const best = runGeneticAlgorithm(); // runGeneticAlgorithm() 호출 → 유전 알고리즘을 돌려서 가장 우수하다고 판단된 가중치 조합(best)을 받아옴
 
-  let results = [];
-  for (let key in hospitalData) {
-    let d = hospitalData[key];
-    let total = d.A + d.B + d.C + d.D;
-    if (total === 0) continue;
-    let floor = parseInt(key.split('층')[0]);
-    let score = getFloorWeight(floor, fireFloor, best) + getPatientWeight(d, best);
-    results.push({ room: key, score, details: `와상 ${d.A}/휠체어 ${d.B}/치매 ${d.D}/자립 ${d.C}` });
+  let results = []; // 실제 화재층 기준으로 계산한 방별 위험 점수를 담을 배열
+  for (let key in hospitalData) { // hospitalData의 모든 방을 순회
+    let d = hospitalData[key]; // 방의 인원 데이터
+    let total = d.A + d.B + d.C + d.D; // 방의 총 인원수
+    if (total === 0) continue; // 사람이 없는 빈 방은 결과에 포함시킬 필요 없으므로 건너뜀
+    let floor = parseInt(key.split('층')[0]); // 이 방이 있는 층 번호 추출
+    let score = getFloorWeight(floor, fireFloor, best) + getPatientWeight(d, best); // getFloorWeight() 호출 → 실제 화재층 기준 이 방의 층 가중치를 구하고, getPatientWeight() 호출 → 환자 구성 가중치를 구해서 합산 = 이 방의 최종 위험 점수
+    results.push({ room: key, score, details: `와상 ${d.A}/휠체어 ${d.B}/치매 ${d.D}/자립 ${d.C}` }); // 방 이름, 점수, 인원 구성 설명 문자열을 묶어서 results 배열에 추가
   }
 
-  results.sort((a, b) => b.score - a.score);
-  const top3 = results.slice(0, 3);
+  results.sort((a, b) => b.score - a.score); // 점수가 높은(위험한) 방이 앞에 오도록 내림차순 정렬
+  const top3 = results.slice(0, 3); // 정렬된 결과 중 상위 3개(가장 위험한 방 3곳)만 잘라서 top3에 저장
 
-  const rl = document.getElementById('resultList');
-  rl.innerHTML = "";
+  const rl = document.getElementById('resultList'); // resultList라는 id를 가진 div(결과가 표시될 영역)를 찾아옴
+  rl.innerHTML = ""; // 기존에 표시되어 있던 결과 내용을 모두 지움(다시 그리기 전 초기화)
 
-  if (top3.length === 0) {
-    rl.innerHTML = "<p>병원 내에 등록된 환자가 없습니다.</p>";
-    return;
+  if (top3.length === 0) { // 만약 top3가 비어있다면(=병원에 등록된 환자가 한 명도 없는 경우)
+    rl.innerHTML = "<p>병원 내에 등록된 환자가 없습니다.</p>"; // 안내 메시지만 표시
+    return; // 더 이상 진행할 결과가 없으므로 함수 종료
   }
 
-  top3.forEach((res, idx) => {
+  top3.forEach((res, idx) => { // top3 배열(가장 위험한 방 3곳)을 순서대로 순회하면서 각각 결과 카드를 만듦
+    // resultList에 새로운 결과 카드 html을 추가
     rl.innerHTML += `
-      <div class="result-card">
-        <b>🥇 ${idx + 1}순위 통제 대상: ${res.room}</b><br>
-        <small>재실자 분포: ${res.details}</small><br>
-        <small>연산된 위험 적합도 점수: ${res.score.toFixed(1)}점</small>
+      <div class="result-card"> <!-- 결과 카드 하나(빨간 선이 왼쪽에 있는 박스) -->
+        <b>🥇 ${idx + 1}순위 통제 대상: ${res.room}</b><br> <!-- 몇 번째로 위험한 방인지(순위)와 방 이름을 굵게 표시 -->
+        <small>재실자 분포: ${res.details}</small><br> <!-- 이 방에 있는 환자 유형별 인원수 설명 표시 -->
+        <small>연산된 위험 적합도 점수: ${res.score.toFixed(1)}점</small> <!-- 계산된 위험 점수를 소수점 첫째자리까지 표시 -->
       </div>`;
   });
 
+  // 결과 카드 3개 아래에 이번에 GA가 찾아낸 가중치 정보를 보여주는 박스를 추가
   rl.innerHTML += `
-    <div class="weight-box">
-      <b>🧬 이번에 AI가 찾아낸 가중치</b><br>
+    <div class="weight-box"> <!-- 연한 파란 배경의 가중치 요약 박스 -->
+      <b>🧬 이번에 AI가 찾아낸 가중치</b><br> <!-- 박스 제목 -->
       화재층: ${best.fireFloorW.toFixed(1)} / 직상층: ${best.adjFloorW.toFixed(1)} /
-      그외상층: ${best.upperFloorW.toFixed(1)} / 하부층: ${best.lowerFloorW.toFixed(1)}<br>
+      그외상층: ${best.upperFloorW.toFixed(1)} / 하부층: ${best.lowerFloorW.toFixed(1)}<br> <!-- GA가 찾은 층 관련 가중치 4종을 소수점 첫째자리까지 표시 -->
       와상: ${best.wA.toFixed(1)} / 휠체어: ${best.wB.toFixed(1)} /
-      치매: ${best.wD.toFixed(1)} / 자립: ${best.wC.toFixed(1)}
+      치매: ${best.wD.toFixed(1)} / 자립: ${best.wC.toFixed(1)} <!-- GA가 찾은 환자 유형별 가중치 4종을 소수점 첫째자리까지 표시 -->
     </div>`;
 }
 // ================= 결과 출력 UI 끝 =================
