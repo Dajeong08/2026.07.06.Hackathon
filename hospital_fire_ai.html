@@ -243,13 +243,14 @@ function estimateAttendSeconds(data) { // 방 하나를 대피/구조하는 데 
 
 function evaluatePenalty(chromosome) { // 특정 가중치 조합(chromosome)이 얼마나 "나쁜"(패널티가 큰) 순위를 만들어내는지 평가하는 함수. 
 // GA의 적합도(fitness) 계산 역할이며, 값이 작을수록 좋은 염색체임. runGeneticAlgorithm()에서 각 세대마다 population 전체에 대해 반복 호출됨
-  let totalPenalty = 0; // 전체 패널티 총합을 누적할 변수, 0으로 초기화
 
   let candidateFireFloors = new Set(); // 가상으로 불을 질러볼 층들을 모아둘 주머니입니다. (Set은 중복 제거)
   for (let key in hospitalData) { // hospitalData에 있는 모든 방을 순회
     let d = hospitalData[key]; // 해당 방의 인원 데이터를 가져옴
     if (d.A + d.B + d.C + d.D > 0) candidateFireFloors.add(parseInt(key.split('층')[0])); // 그 방에 환자가 1명이라도 있으면, 그 방이 속한 층 번호를 candidateFireFloors에 추가(즉, 사람이 있는 층만 화재 시나리오 후보로 검토)
   }
+  
+  let totalPenalty = 0; // 전체 패널티 총합을 누적할 변수, 0으로 초기화
 
   candidateFireFloors.forEach(hypoFireFloor => { // 후보로 뽑힌 각 층을 "가상 화재 발생층(hypoFireFloor)"으로 가정하며 하나씩 시뮬레이션 진행
     let rooms = []; // 이번 가상 화재 시나리오에서 사용할 방 목록(점수 포함)을 담을 배열
@@ -258,7 +259,8 @@ function evaluatePenalty(chromosome) { // 특정 가중치 조합(chromosome)이
       let total = d.A + d.B + d.C + d.D; // 방의 총 인원수
       if (total === 0) continue; // 사람이 없는 빈 방은 계산할 필요 없으므로 건너뜀
       let floor = parseInt(key.split('층')[0]); // 이 방이 있는 층 번호를 추출
-      let score = getFloorWeight(floor, hypoFireFloor, chromosome) + getPatientWeight(d, chromosome); // getFloorWeight() 호출 → 이 방 층이 가상화재층 기준 몇층 관계인지에 따른 가중치를 얻고, getPatientWeight() 호출 → 이 방 환자 구성에 따른 가중치를 얻어서 두 값을 합산 = 이 방의 위험 점수
+      let score = getFloorWeight(floor, hypoFireFloor, chromosome) 
+        + getPatientWeight(d, chromosome); // getFloorWeight() 호출 → 이 방 층이 가상화재층 기준 몇층 관계인지에 따른 가중치를 얻고, getPatientWeight() 호출 → 이 방 환자 구성에 따른 가중치를 얻어서 두 값을 합산 = 이 방의 위험 점수
       rooms.push({ floor, data: d, score }); // 계산된 층/데이터/점수를 rooms 배열에 추가
     }
 
@@ -292,21 +294,23 @@ function crossover(a, b) { // 부모 염색체 두 개(a, b)를 교배시켜 새
 }
 
 function mutate(c) { // 염색체(c)에 무작위 돌연변이를 일으키는 함수. crossover()로 만들어진 자식마다 호출되어 다양성을 유지시켜줌(local optimum에 갇히지 않도록)
-  const keys = ["fireFloorW", "adjFloorW", "upperFloorW", "lowerFloorW", "wA", "wB", "wD", "wC"]; // 돌연변이를 적용할 수 있는 모든 유전자(가중치 항목) 이름 목록
+  const keys = ["fireFloorW", "adjFloorW", "upperFloorW", "lowerFloorW", 
+    "wA", "wB", "wD", "wC"]; // 돌연변이를 적용할 수 있는 모든 유전자(가중치 항목) 이름 목록
   keys.forEach(k => { // 각 유전자 항목에 대해 반복
-    if (Math.random() < 0.1) c[k] = k.startsWith("w") ? getRandom(0, 60) : getRandom(0, 120); 
+    if (Math.random() < 0.1) c[k] = 
+      k.startsWith("w") ? getRandom(0, 60) : getRandom(0, 120); 
     // 10% 확률로 돌연변이 발생: 항목 이름이 "w"로 시작하면(환자 유형 가중치) 0~60 범위, 아니면(층 가중치) 0~120 범위에서 getRandom()을 호출해 새로운 무작위 값으로 덮어씀
   });
 }
 
 function runGeneticAlgorithm() { // 실제로 유전 알고리즘을 처음부터 끝까지 수행해서 가장 좋은 가중치 조합(염색체)을 찾아 반환하는 함수. runEvacuationAI()에서 호출됨
-  const popSize = 30; // 한 세대에 존재할 염색체(가중치 조합) 개체 수를 30으로 설정
-  const generations = 40; // 세대를 총 몇 번 반복해서 진화시킬지 40으로 설정
-
   let population = []; // 현재 세대의 개체(염색체)들을 담을 배열, 빈 배열로 시작
+
+  const popSize = 30; // 한 세대에 존재할 염색체(가중치 조합) 개체 수를 30으로 설정
   for (let i = 0; i < popSize; i++) population.push(randomChromosome()); 
   // randomChromosome()을 30번 호출해서 무작위 초기 개체군(1세대)을 생성
-
+  
+  const generations = 40; // 세대를 총 몇 번 반복해서 진화시킬지 40으로 설정
   for (let gen = 0; gen < generations; gen++) { // 세대를 0부터 39까지, 즉 40번 반복하며 진화 과정을 수행
     population.forEach(c => c.penalty = evaluatePenalty(c)); // 현재 세대의 모든 개체에 대해 evaluatePenalty()를 호출 → 각 염색체의 패널티(적합도) 점수를 계산해서 저장
     population.sort((a, b) => a.penalty - b.penalty); // 패널티가 낮은(=더 좋은) 개체가 앞에 오도록 오름차순 정렬

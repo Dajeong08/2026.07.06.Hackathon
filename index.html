@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 요양병원 화재 대피 관제 시스템</title>
+<style>
+/* =====================================================
+   기본 변수 (다크모드 팔레트)
+   ===================================================== */
+:root {
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --panel-alt: #f7f8fa;
+    --border: #e2e5ea;
+    --text: #1a1d21;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-dark: #1d4ed8;
+
+
+    --critical: #dc2626;   /* 매우 위험 */
+    --high: #ea580c;       /* 위험 */
+    --caution: #ca8a04;    /* 주의 */
+    --safe: #16a34a;       /* 안전 */
+
+
+    --radius: 12px;
+    --shadow: 0 2px 10px rgba(20,20,30,0.06);
+}
+
+
+* { box-sizing: border-box; }
+
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Pretendard", -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+}
+
+
+/* =====================================================
+   애니메이션
+   ===================================================== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 rgba(239,68,68,0); }
+    50%      { box-shadow: 0 0 12px rgba(239,68,68,0.5); }
+}
+@keyframes stripes {
+    from { background-position: 0 0; }
+    to   { background-position: 40px 0; }
+}
+@keyframes popIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+
+.fade-in { animation: fadeIn 0.35s ease both; }
+.pop-in { animation: popIn 0.3s ease both; }
+
+
+/* =====================================================
+   레이아웃
+   ===================================================== */
+.app-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 26px;
+    background: linear-gradient(180deg, #ffffff, #f4f5f7);
+    border-bottom: 1px solid var(--border);
+}
+.app-header .title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+.app-header .subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 4px;
+}
+
+
+.stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    padding: 18px 26px 0;
+}
+.stat-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+}
+.stat-card .stat-label {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+.stat-card .stat-value {
+    font-size: 22px;
+    font-weight: 700;
+}
+.stat-card.status-idle .stat-value { color: var(--muted); }
+.stat-card.status-running .stat-value { color: var(--accent); }
+.stat-card.status-done .stat-value { color: var(--safe); }
+
+
+.layout-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 18px;
+    padding: 18px 26px 26px;
+    align-items: start;
+}
+@media (max-width: 860px) {
+    .layout-grid { grid-template-columns: 1fr; }
+}
+
+
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: var(--shadow);
+}
+.panel + .panel { margin-top: 18px; }
+.panel h3 {
+    margin: 0 0 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+
+/* =====================================================
+   컨트롤 요소
+   ===================================================== */
+.field-group { margin-bottom: 14px; }
+.field-group label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+}
+select, input[type=number] {
+    width: 100%;
+    padding: 9px 10px;
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    font-size: 13px;
+    transition: border-color 0.15s ease;
+}
+select:focus, input[type=number]:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+
+button {
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--panel-alt);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13px;
+    transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+}
+button:hover { background: #ebedf1; border-color: #c9cdd4; }
+button:active { transform: scale(0.97); }
+
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-row button { flex: 1; }
+
+
+.btn-ai {
+    width: 100%;
+    margin-top: 6px;
+    padding: 13px;
+    font-weight: 700;
+    font-size: 14px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    border: none;
+    color: #fff;
+    letter-spacing: -0.2px;
+}
+.btn-ai:hover { filter: brightness(1.08); }
+.btn-ai:disabled { opacity: 0.6; cursor: not-allowed; }
+
+
+.floor-note { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+
+/* =====================================================
+   병동 현황 - 층별 그룹 + 방 카드
+   ===================================================== */
+.floor-group { margin-bottom: 22px; }
+.floor-group:last-child { margin-bottom: 0; }
+.floor-group-title {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--border);
+}
+
+
+.room-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+}
+
+
+.room-card {
+    background: var(--panel-alt);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.room-card:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: var(--shadow);
+}
+.room-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.35);
+}
+.room-card .room-name {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.room-card .risk-badge {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+.room-card .patient-line {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    margin-top: 3px;
+}
+.room-card .patient-line span:last-child { color: var(--text); font-weight: 600; }
+
+
+.risk-critical { border-color: var(--critical); background: rgba(220,38,38,0.06); }
+.risk-critical .risk-badge { background: rgba(220,38,38,0.14); color: #b91c1c; }
+.risk-high      { border-color: var(--high); background: rgba(234,88,12,0.06); }
+.risk-high .risk-badge { background: rgba(234,88,12,0.14); color: #9a3412; }
+.risk-caution   { border-color: var(--caution); background: rgba(202,138,4,0.06); }
+.risk-caution .risk-badge { background: rgba(202,138,4,0.14); color: #854d0e; }
+.risk-safe      { border-color: var(--safe); background: rgba(22,163,74,0.06); }
+.risk-safe .risk-badge { background: rgba(22,163,74,0.14); color: #166534; }
+
+
+.legend { display: flex; gap: 16px; margin-top: 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.dot { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+
+
+/* =====================================================
+   AI 분석 진행 상태
+   ===================================================== */
+.ai-progress {
+    margin-top: 10px;
+    display: none;
+}
+.ai-progress.active { display: block; }
+.ai-progress .label {
+    font-size: 12px;
+    color: var(--accent);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.progress-track {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--panel-alt);
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+.progress-fill {
+    height: 100%;
+    width: 40%;
+    background: repeating-linear-gradient(45deg, var(--accent), var(--accent) 10px, var(--accent-dark) 10px, var(--accent-dark) 20px);
+    background-size: 40px 40px;
+    animation: stripes 0.7s linear infinite;
+}
+.ai-complete {
+    font-size: 12px;
+    color: var(--safe);
+    margin-top: 8px;
+    display: none;
+    align-items: center;
+    gap: 6px;
+}
+.ai-complete.active { display: flex; }
+
+
+/* =====================================================
+   AI 결과 카드
+   ===================================================== */
+.result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+}
+.result-card {
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    text-align: center;
+}
+.result-card.rank1 {
+    border-color: var(--critical);
+    background: rgba(239,68,68,0.1);
+    animation: pulseGlow 2.2s ease-in-out infinite;
+}
+.result-card .medal { font-size: 26px; }
+.result-card .room-name { font-size: 15px; font-weight: 700; margin: 6px 0 4px; }
+.result-card .score-line { font-size: 12px; color: var(--muted); }
+.result-card .score-line b { color: var(--text); }
+.result-card .time-line { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+
+.weight-box {
+    margin-top: 16px;
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+}
+.weight-box b { color: var(--text); }
+
+
+.empty-hint { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+
+<div class="app-header">
+    <span style="font-size:22px;">🚨</span>
+    <span class="title">AI 요양병원 화재 대피 관제 시스템</span>
+    <span class="subtitle">Genetic Algorithm 기반 우선순위 산출</span>
+</div>
+
+
+<!-- 상단 상태 카드 -->
+<div class="stat-row">
+    <div class="stat-card">
+        <div class="stat-label">🔥 화재층</div>
+        <div class="stat-value" id="statFireFloor">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">🧬 Generation</div>
+        <div class="stat-value" id="statGeneration">-</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">📉 Penalty</div>
+        <div class="stat-value" id="statPenalty">-</div>
+    </div>
+</div>
+
+
+<div class="layout-grid">
+
+
+    <!-- 좌측: 컨트롤 -->
+    <div>
+        <div class="panel">
+            <h3>🏢 건물 설정</h3>
+            <div class="field-group">
+                <label>화재 발생 층</label>
+                <select id="fireFloor" onchange="onFireFloorChange()"></select>
+            </div>
+            <div class="btn-row">
+                <button onclick="addFloor()">➕ 층 추가</button>
+                <button onclick="removeFloor()">➖ 층 제거</button>
+            </div>
+            <div class="floor-note">최대 <span id="maxFloorLimitLabel"></span>층까지 추가 가능</div>
+
+
+            <div class="btn-row" style="margin-top:14px;">
+                <button onclick="randomizePatients()">🎲 랜덤 생성</button>
+            </div>
+
+
+            <button class="btn-ai" id="aiBtn" onclick="startAiAnalysis()">🧬 AI 분석 시작</button>
+
+
+            <div class="ai-progress" id="aiProgress">
+                <div class="label"><span>⏳</span><span>Calculating...</span></div>
+                <div class="progress-track"><div class="progress-fill"></div></div>
+            </div>
+            <div class="ai-complete" id="aiComplete">
+                <span>✅</span><span>분석 완료</span>
+            </div>
+        </div>
+
+
+        <div class="panel">
+            <h3>📝 환자 편집 — <span id="selectedRoomLabel">선택 없음</span></h3>
+            <div id="editorInputs">
+                <p class="empty-hint">방 카드를 클릭하면 입력창이 활성화됩니다.</p>
+            </div>
+            <button id="saveBtn" onclick="saveRoomData()" disabled style="width:100%; margin-top:8px;">💾 현재 방 데이터 저장</button>
+        </div>
+    </div>
+
+
+    <!-- 우측: 현황 + 결과 -->
+    <div>
+        <div class="panel">
+            <h3>🏥 병동 현황</h3>
+            <div id="roomContainer"></div>
+            <div class="legend">
+                <span><span class="dot" style="background:var(--critical);"></span>매우 위험</span>
+                <span><span class="dot" style="background:var(--high);"></span>위험</span>
+                <span><span class="dot" style="background:var(--caution);"></span>주의</span>
+                <span><span class="dot" style="background:var(--safe);"></span>안전</span>
+            </div>
+        </div>
+
+
+        <div class="panel">
+            <h3>⚡ AI 추천 대피 순위 TOP 3</h3>
+            <div id="resultList">
+                <p class="empty-hint">AI 분석 시작 버튼을 누르면 결과가 표시됩니다.</p>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+
+<script>
+/* =====================================================
+   전역 상태 / 데이터
+   (건물 층수, 현재 선택 방, 병실별 환자 데이터)
+   ===================================================== */
+let maxFloor = 4;
+let currentSelectedRoom = null;
+let hospitalData = {};
+
+
+const MAX_FLOOR_LIMIT = 10;
+
+
+// AI 분석 이후 방 카드 색상 표시에 재사용하기 위한 캐시
+// (GA 알고리즘 자체의 상태가 아니라, UI 렌더링 전용 캐시)
+let lastEvaluationResults = null;
+let lastBestChromosome = null;
+
+
+const GA_GENERATIONS = 40; // runGeneticAlgorithm() 내부와 동일한 값(표시용)
+
+
+window.onload = function () {
+    initData();
+    document.getElementById('maxFloorLimitLabel').innerText = MAX_FLOOR_LIMIT;
+    renderFireFloorOptions();
+    renderRooms();
+    updateTopStats();
+};
+
+
+/* =====================================================
+   초기 데이터 생성 (기존 로직과 동일)
+   ===================================================== */
+function initData() {
+    for (let f = 1; f <= 4; f++) createFloorData(f);
+}
+
+
+function createFloorData(f) {
+    for (let r = 1; r <= 6; r++) {
+        let roomKey = `${f}층-${r}호`;
+        if (!hospitalData[roomKey]) {
+            hospitalData[roomKey] = {
+                A: (f === 2 && r === 1) ? 3 : (f === 3 && r === 2) ? 4 : 0,
+                B: (f === 2 && r === 3) ? 2 : 0,
+                C: 0, D: 0
+            };
+        }
+    }
+}
+
+
+/* =====================================================
+   화재층 선택 옵션 (층 추가/제거 시 자동 갱신)
+   ===================================================== */
+function renderFireFloorOptions() {
+    const select = document.getElementById('fireFloor');
+    const prevValue = select.value;
+    select.innerHTML = "";
+    for (let f = 1; f <= maxFloor; f++) {
+        const opt = document.createElement('option');
+        opt.value = f;
+        opt.textContent = `${f}층`;
+        select.appendChild(opt);
+    }
+    if (prevValue && parseInt(prevValue) <= maxFloor) {
+        select.value = prevValue;
+    } else {
+        select.value = Math.min(2, maxFloor);
+    }
+    updateTopStats();
+}
+
+
+function onFireFloorChange() {
+    updateTopStats();
+}
+
+
+/* =====================================================
+   층 추가 / 제거
+   ===================================================== */
+function addFloor() {
+    if (maxFloor >= MAX_FLOOR_LIMIT) {
+        alert(`최대 ${MAX_FLOOR_LIMIT}층까지만 추가할 수 있습니다.`);
+        return;
+    }
+    maxFloor++;
+    createFloorData(maxFloor);
+    renderFireFloorOptions();
+    renderRooms();
+}
+
+
+function removeFloor() {
+    if (maxFloor <= 1) {
+        alert("최소 1개 층은 있어야 합니다.");
+        return;
+    }
+    if (!confirm(`${maxFloor}층을 삭제하시겠습니까?\n해당 층의 환자 데이터도 함께 삭제됩니다.`)) {
+        return;
+    }
+    for (let r = 1; r <= 6; r++) {
+        delete hospitalData[`${maxFloor}층-${r}호`];
+    }
+    maxFloor--;
+    lastEvaluationResults = null;
+    renderFireFloorOptions();
+    renderRooms();
+}
+
+
+/* =====================================================
+   위험도 등급 판정 (UI 전용 로직 — GA 알고리즘과 무관)
+   - AI 분석 전: 재실 인원 구성 기반 간단 휴리스틱
+   - AI 분석 후: 실제 GA 점수의 상대적 순위(사분위) 기반
+   ===================================================== */
+function quickRiskTier(data) {
+    const weighted = data.A * 3 + data.D * 2 + data.B * 1.5 + data.C * 0.5;
+    if (weighted >= 10) return 'critical';
+    if (weighted >= 6) return 'high';
+    if (weighted >= 3) return 'caution';
+    return 'safe';
+}
+
+
+function scoreBasedRiskTier(roomKey) {
+    if (!lastEvaluationResults || lastEvaluationResults.length === 0) return null;
+    const entry = lastEvaluationResults.find(r => r.room === roomKey);
+    if (!entry) return null;
+
+
+    const sorted = [...lastEvaluationResults].sort((a, b) => b.score - a.score);
+    const n = sorted.length;
+    const q1 = sorted[Math.max(0, Math.floor(n * 0.25) - 1)].score;
+    const q2 = sorted[Math.max(0, Math.floor(n * 0.50) - 1)].score;
+    const q3 = sorted[Math.max(0, Math.floor(n * 0.75) - 1)].score;
+
+
+    if (entry.score >= q1) return 'critical';
+    if (entry.score >= q2) return 'high';
+    if (entry.score >= q3) return 'caution';
+    return 'safe';
+}
+
+
+const RISK_LABEL = { critical: '매우 위험', high: '위험', caution: '주의', safe: '안전' };
+
+
+/* =====================================================
+   병동 현황 렌더링 — 전체 층을 그룹으로 묶어 카드 그리드로 표시
+   ===================================================== */
+function renderRooms() {
+    const container = document.getElementById('roomContainer');
+    container.innerHTML = "";
+
+
+    for (let f = 1; f <= maxFloor; f++) {
+        const group = document.createElement('div');
+        group.className = 'floor-group fade-in';
+
+
+        const title = document.createElement('div');
+        title.className = 'floor-group-title';
+        title.innerText = `${f}층`;
+        group.appendChild(title);
+
+
+        const grid = document.createElement('div');
+        grid.className = 'room-grid';
+
+
+        for (let r = 1; r <= 6; r++) {
+            const roomKey = `${f}층-${r}호`;
+            const data = hospitalData[roomKey];
+            const total = data.A + data.B + data.C + data.D;
+
+
+            const tier = total === 0 ? 'safe' : (scoreBasedRiskTier(roomKey) || quickRiskTier(data));
+
+
+            const card = document.createElement('div');
+            card.className = `room-card risk-${tier} pop-in` + (currentSelectedRoom === roomKey ? ' selected' : '');
+            card.onclick = () => selectRoom(roomKey);
+
+
+            card.innerHTML = `
+                <div class="room-name">
+                    <span>${f}0${r}호</span>
+                    <span class="risk-badge">${RISK_LABEL[tier]}</span>
+                </div>
+                <div class="patient-line"><span>👤 와상</span><span>${data.A}</span></div>
+                <div class="patient-line"><span>♿ 휠체어</span><span>${data.B}</span></div>
+                <div class="patient-line"><span>🧠 치매</span><span>${data.D}</span></div>
+                <div class="patient-line"><span>🚶 자립</span><span>${data.C}</span></div>
+            `;
+            grid.appendChild(card);
+        }
+
+
+        group.appendChild(grid);
+        container.appendChild(group);
+    }
+}
+
+
+/* =====================================================
+   방 선택 / 환자 데이터 편집 (기존 로직과 동일)
+   ===================================================== */
+function selectRoom(roomKey) {
+    currentSelectedRoom = roomKey;
+    document.getElementById('selectedRoomLabel').innerText = roomKey;
+    const data = hospitalData[roomKey];
+    document.getElementById('editorInputs').innerHTML = `
+        <div class="field-group"><label>와상(A)</label><input type="number" id="edit_A" value="${data.A}" min="0"></div>
+        <div class="field-group"><label>휠체어(B)</label><input type="number" id="edit_B" value="${data.B}" min="0"></div>
+        <div class="field-group"><label>자립(C)</label><input type="number" id="edit_C" value="${data.C}" min="0"></div>
+        <div class="field-group"><label>치매(D)</label><input type="number" id="edit_D" value="${data.D}" min="0"></div>`;
+    document.getElementById('saveBtn').disabled = false;
+    renderRooms();
+}
+
+
+function saveRoomData() {
+    if (!currentSelectedRoom) return;
+    hospitalData[currentSelectedRoom] = {
+        A: parseInt(document.getElementById('edit_A').value) || 0,
+        B: parseInt(document.getElementById('edit_B').value) || 0,
+        C: parseInt(document.getElementById('edit_C').value) || 0,
+        D: parseInt(document.getElementById('edit_D').value) || 0
+    };
+    lastEvaluationResults = null;
+    renderRooms();
+}
+
+
+function randomizePatients() {
+    for (let key in hospitalData) {
+        hospitalData[key] = {
+            A: Math.floor(Math.random() * 4),
+            B: Math.floor(Math.random() * 3),
+            C: Math.floor(Math.random() * 4),
+            D: Math.floor(Math.random() * 3)
+        };
+    }
+    lastEvaluationResults = null;
+    renderRooms();
+}
+
+
+/* =====================================================
+   상단 상태 카드 갱신
+   ===================================================== */
+function updateTopStats() {
+    const fireFloorEl = document.getElementById('fireFloor');
+    const fireFloor = fireFloorEl && fireFloorEl.value ? fireFloorEl.value : '-';
+    document.getElementById('statFireFloor').innerText = fireFloor !== '-' ? `${fireFloor}층` : '-';
+}
+
+
+/* =====================================================
+   ⭐⭐⭐ GA(유전 알고리즘) 파트 — 이전 버전과 100% 동일 ⭐⭐⭐
+   아래 8개 함수는 UI 개선 과정에서 한 글자도 수정하지 않았습니다.
+   ===================================================== */
+
+
+function randomChromosome() {
+    return {
+        fireFloorW: getRandom(0, 120),
+        adjFloorW:  getRandom(0, 120),
+        upperFloorW:getRandom(0, 120),
+        lowerFloorW:getRandom(0, 120),
+        wA: getRandom(0, 60),
+        wB: getRandom(0, 60),
+        wD: getRandom(0, 60),
+        wC: getRandom(0, 60)
+    };
+}
+
+
+function getRandom(min, max) { return Math.random() * (max - min) + min; }
+
+
+function getFloorWeight(roomFloor, fireFloor, c) {
+    if (roomFloor === fireFloor) return c.fireFloorW;
+    if (roomFloor === fireFloor + 1) return c.adjFloorW;
+    if (roomFloor > fireFloor) return c.upperFloorW;
+    return c.lowerFloorW;
+}
+
+
+function getPatientWeight(data, c) {
+    return data.A * c.wA + data.B * c.wB + data.D * c.wD + data.C * c.wC;
+}
+
+
+function estimateAttendSeconds(data) {
+    return data.A * 180 + data.B * 60 + data.D * 90 + data.C * 20;
+}
+
+
+function evaluatePenalty(chromosome) {
+    let totalPenalty = 0;
+
+
+    let candidateFireFloors = new Set();
+    for (let key in hospitalData) {
+        let d = hospitalData[key];
+        if (d.A + d.B + d.C + d.D > 0) {
+            candidateFireFloors.add(parseInt(key.split('층')[0]));
+        }
+    }
+
+
+    candidateFireFloors.forEach(hypoFireFloor => {
+        let rooms = [];
+        for (let key in hospitalData) {
+            let d = hospitalData[key];
+            let total = d.A + d.B + d.C + d.D;
+            if (total === 0) continue;
+
+
+            let floor = parseInt(key.split('층')[0]);
+            let score = getFloorWeight(floor, hypoFireFloor, chromosome) + getPatientWeight(d, chromosome);
+            rooms.push({ floor, data: d, score });
+        }
+
+
+        rooms.sort((a, b) => b.score - a.score);
+
+
+        let elapsed = 0;
+        rooms.forEach(r => {
+            elapsed += estimateAttendSeconds(r.data);
+            if (r.floor === hypoFireFloor) totalPenalty += elapsed * 2;
+            else if (Math.abs(r.floor - hypoFireFloor) === 1) totalPenalty += elapsed * 1.5;
+            else totalPenalty += elapsed;
+        });
+    });
+
+
+    return totalPenalty;
+}
+
+
+function crossover(a, b) {
+    const pick = (x, y) => Math.random() > 0.5 ? x : y;
+    return {
+        fireFloorW: pick(a.fireFloorW, b.fireFloorW),
+        adjFloorW:  pick(a.adjFloorW, b.adjFloorW),
+        upperFloorW:pick(a.upperFloorW, b.upperFloorW),
+        lowerFloorW:pick(a.lowerFloorW, b.lowerFloorW),
+        wA: pick(a.wA, b.wA),
+        wB: pick(a.wB, b.wB),
+        wD: pick(a.wD, b.wD),
+        wC: pick(a.wC, b.wC)
+    };
+}
+
+
+function mutate(c) {
+    const keys = ["fireFloorW","adjFloorW","upperFloorW","lowerFloorW","wA","wB","wD","wC"];
+    keys.forEach(k => {
+        if (Math.random() < 0.1) {
+            c[k] = k.startsWith("w") ? getRandom(0, 60) : getRandom(0, 120);
+        }
+    });
+}
+
+
+function runGeneticAlgorithm() {
+    const popSize = 30;
+    const generations = 40;
+
+
+    let population = [];
+    for (let i = 0; i < popSize; i++) population.push(randomChromosome());
+
+
+    for (let gen = 0; gen < generations; gen++) {
+        population.forEach(c => c.penalty = evaluatePenalty(c));
+        population.sort((a, b) => a.penalty - b.penalty);
+
+
+        let parents = population.slice(0, popSize / 2);
+        let next = [];
+        while (next.length < popSize) {
+            let pa = parents[Math.floor(Math.random() * parents.length)];
+            let pb = parents[Math.floor(Math.random() * parents.length)];
+            let child = crossover(pa, pb);
+            mutate(child);
+            next.push(child);
+        }
+        population = next;
+    }
+
+
+    population.forEach(c => c.penalty = evaluatePenalty(c));
+    population.sort((a, b) => a.penalty - b.penalty);
+    return population[0];
+}
+
+
+/* =====================================================
+   AI 분석 시작 버튼 — 로딩 애니메이션 표시 후 GA 실행
+   (setTimeout으로 한 프레임 양보해 로딩 UI가 먼저 그려지게 함)
+   ===================================================== */
+function startAiAnalysis() {
+    const btn = document.getElementById('aiBtn');
+    const progress = document.getElementById('aiProgress');
+    const complete = document.getElementById('aiComplete');
+
+
+    btn.disabled = true;
+    complete.classList.remove('active');
+    progress.classList.add('active');
+
+
+    setTimeout(() => {
+        runEvacuationAI(); // GA 계산 + 결과 렌더링 (알고리즘 로직 불변)
+
+
+        progress.classList.remove('active');
+        complete.classList.add('active');
+        btn.disabled = false;
+    }, 400); // 로딩 애니메이션이 눈에 보이도록 하는 최소 대기 (연산 로직과 무관)
+}
+
+
+/* =====================================================
+   AI 버튼 클릭 시 실행되는 핵심 함수
+   - GA 실행 및 방별 점수 계산 로직은 기존과 완전히 동일
+   - 달라진 부분은 "결과를 어떻게 화면에 표시하는가"뿐
+   ===================================================== */
+function runEvacuationAI() {
+    const fireFloor = parseInt(document.getElementById('fireFloor').value);
+
+
+    const best = runGeneticAlgorithm(); // ⭐ 알고리즘 호출부 동일
+    lastBestChromosome = best;
+
+
+    let evaluationResults = [];
+    for (let roomKey in hospitalData) {
+        let data = hospitalData[roomKey];
+        let total = data.A + data.B + data.C + data.D;
+        if (total === 0) continue;
+
+
+        let floor = parseInt(roomKey.split('층')[0]);
+        let score = getFloorWeight(floor, fireFloor, best) + getPatientWeight(data, best); // ⭐ 동일
+
+
+        evaluationResults.push({
+            room: roomKey,
+            score: score,
+            data: data,
+            details: `와상 ${data.A}/휠체어 ${data.B}/치매 ${data.D}/자립 ${data.C}`
+        });
+    }
+
+
+    evaluationResults.sort((a, b) => b.score - a.score); // ⭐ 동일
+    lastEvaluationResults = evaluationResults;
+
+
+    renderTopStats(fireFloor, best);
+    renderResultCards(evaluationResults);
+    renderRooms(); // 방 카드 색상을 실제 GA 결과로 재갱신
+}
+
+
+/* ---- 상단 상태 카드 갱신 (Generation / Penalty) ---- */
+function renderTopStats(fireFloor, best) {
+    document.getElementById('statFireFloor').innerText = `${fireFloor}층`;
+    document.getElementById('statGeneration').innerText = `${GA_GENERATIONS}세대`;
+    document.getElementById('statPenalty').innerText = best.penalty.toFixed(0);
+}
+
+
+/* ---- AI 결과 TOP3 카드 렌더링 ---- */
+function renderResultCards(evaluationResults) {
+    const top3 = evaluationResults.slice(0, 3);
+    const medals = ['🥇', '🥈', '🥉'];
+
+
+    const rl = document.getElementById('resultList');
+    rl.innerHTML = "";
+
+
+    if (top3.length === 0) {
+        rl.innerHTML = `<p class="empty-hint">병원 내에 등록된 환자가 없습니다.</p>`;
+        return;
+    }
+
+
+    const grid = document.createElement('div');
+    grid.className = 'result-grid';
+
+
+    top3.forEach((res, idx) => {
+        const card = document.createElement('div');
+        card.className = `result-card pop-in ${idx === 0 ? 'rank1' : ''}`;
+        card.innerHTML = `
+            <div class="medal">${medals[idx]}</div>
+            <div class="room-name">${res.room}</div>
+            <div class="score-line">Score : <b>${res.score.toFixed(1)}</b></div>
+        `;
+        grid.appendChild(card);
+    });
+
+
+    rl.appendChild(grid);
+
+
+    const best = lastBestChromosome;
+    rl.innerHTML += `
+        <div class="weight-box">
+            <b>🧬 이번에 AI가 찾아낸 가중치</b><br>
+            화재층: ${best.fireFloorW.toFixed(1)} / 직상층: ${best.adjFloorW.toFixed(1)} /
+            그외상층: ${best.upperFloorW.toFixed(1)} / 하부층: ${best.lowerFloorW.toFixed(1)}<br>
+            와상: ${best.wA.toFixed(1)} / 휠체어: ${best.wB.toFixed(1)} /
+            치매: ${best.wD.toFixed(1)} / 자립: ${best.wC.toFixed(1)}
+        </div>`;
+}
+</script>
+</body>
+</html>
